@@ -175,6 +175,18 @@ export function fixture(t, { failPublish = false, brokenCard = false, onFirstVal
   })
   return { pluginData, pluginMedia, pluginState, computeSceneTarget, engine, root, archivePath, nativePath, installs, finished, removed, attached, detached, published, unpublished, attempted, registrationState, bytes, images, worldbooks, materials, cardPayloads }
 }
+test('B05 大存档Base64：1/4/8MiB完整SQL导入无栈溢出且错误输入受控拒绝', async t => {
+  const f=fixture(t)
+  for(const mib of [1,4,8]){
+    const text='x'.repeat(mib*1024*1024),db=new DatabaseSync(f.archivePath(CHAT))
+    try{db.prepare('UPDATE archive_messages SET message_json=? WHERE message_index=0').run(JSON.stringify({role:'assistant',turn:1,text,anchor:SESSION}))}finally{db.close()}
+    const exported=await f.engine.exportGameSave(SESSION)
+    const result=await f.engine.importGameSave({fileB64:exported.base64})
+    assert.equal(inspectDatabase(f.archivePath(result.chatId),'archive').head.messages[0].text,text)
+  }
+  for(const text of ['A','====','A===','AA=A','AA?=','AA A','AA==\n','A'.repeat(90*1024*1024+4)])await assert.rejects(()=>f.engine.importGameSave({fileB64:text}),/请选择有效的插件DB存档包/)
+})
+
 test('DB自含正文包新双ID导入源不变', async t => {
   const f = fixture(t), before = readFileSync(f.archivePath(CHAT)), nativeBefore = readFileSync(f.nativePath(SESSION))
   const exported = await f.engine.exportGameSave(SESSION)

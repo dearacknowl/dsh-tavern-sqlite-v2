@@ -353,8 +353,12 @@ export function createChatSqliteStore(options = {}) {
     const keys = Object.keys(chat)
     const messages = Array.isArray(chat.messages) ? chat.messages : []
     const useTransaction = options.inTransaction !== true
-    if (useTransaction) db.exec('BEGIN')
+    if (useTransaction) db.exec('BEGIN IMMEDIATE')
     try {
+      if(options.expectedRevision!==undefined){
+        const row=db.prepare('SELECT revision FROM archive_head WHERE id=1').get(),actual=row?Number(row.revision):null
+        if(actual!==options.expectedRevision){const error=new Error('Chat 存储提交时 revision 已变化：期望 '+String(options.expectedRevision)+'，实际 '+String(actual));error.code='DSH_TAVERN_REVISION_CONFLICT';throw error}
+      }
       // 当前书保持作者接口；逐轮历史仅在同一事务存一次完整版本，账本留精确引用。
       const compacted = rollbackWorldbooks.compact(db, chat)
       if (compacted !== chat && changes !== null) {
@@ -879,7 +883,7 @@ export function createChatSqliteStore(options = {}) {
       if (Number(db.prepare('SELECT revision FROM archive_head WHERE id=1').get()?.revision)!==expectedRevision) return undefined
       // storedChat = 实际落库的形态（老楼 variables 可能已被 K4 修剪进同库快照表）：
       // 写缓存/返回都用它，避免"库是瘦的、内存缓存是全的"这种 hydrate-full-then-remember-huge。
-      const written = writeChat(db, chatId, next, expectedRevision + 1, now(), changes)
+      const written = writeChat(db, chatId, next, expectedRevision + 1, now(), changes, {expectedRevision})
       const storedChat = written.chat
       // 复用调用方及内部整理的最终写集；不再全档比较，也不漏掉额外修剪楼。
       changes = written.changes
@@ -913,6 +917,7 @@ export function createChatSqliteStore(options = {}) {
       //   实测：整档 1.2MB 静态 head + 160 楼时，写路径 13.15 → 3.07 ms/写（快 4.29×）。
       const next = copyJsonTree(produced)
       if (next === undefined || next === null || typeof next !== 'object' || Array.isArray(next)) throw new Error('Chat 存储只能保存 JSON object')
+      if(next.id!==chatId)throw new Error('Chat SQLite Store update 返回的 chat.id 与目标不一致')
       // ⚠ 一切校验都放在**建库之前**：先 `new DatabaseSync` + ensureSchema、再校验失败，会留下一个
       //   **空 archive.db**；而 version() 只要见到库文件就回 `sqlite:gen:N` ⇒ 上层会显示
       //   「已使用数据库存档」（档其实是空的）= 半迁移假象。2026-09-30 实测踩中（一次失败的 update
@@ -937,7 +942,7 @@ export function createChatSqliteStore(options = {}) {
       let storedChat = next
       let touched
       try {
-        const written = writeChat(db, chatId, next, revision, now(), changes)
+        const written = writeChat(db, chatId, next, revision, now(), changes, {expectedRevision:currentState?.revision??null})
         storedChat = written.chat
         changes = written.changes
         touched = written.touched

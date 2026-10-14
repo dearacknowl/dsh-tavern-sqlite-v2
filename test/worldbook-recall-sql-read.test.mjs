@@ -1,4 +1,4 @@
-// 召回日志读取：面板请求必须由 SQL 先筛（chat/branch/turn 可选的 created_at DESC, operation_id DESC LIMIT 1），
+// 召回日志读取：面板请求必须由 SQL 先筛（chat/branch/turn 可选的 created_at DESC, rowid DESC LIMIT 1），
 // 只对最终候选行 parse payload；轮次菜单只做 metadata-only 投影，绝不 parse value_json。
 // 本文件独立自有 tmp DB + 独立 fixture，不触真实档、不做整表 JSON 往返、不新增产品后门/探针。
 import test from 'node:test'
@@ -35,10 +35,10 @@ function countRows(root,sql,...params){
  try{return db.prepare(sql).get(...params).n}finally{db.close()}
 }
 
-// 旧契约内存 oracle：升序 (created_at, operation_id) → findLast(match) → 首次出现去重。
+// 旧契约内存 oracle：升序 (created_at, rowid/插入顺序) → findLast(match) → 首次出现去重。
 // 仅用于小型 synthetic 对照，不作为产品实现。
 function legacyRead(rows,chat,turn){
- const sorted=[...rows].sort((a,b)=>a.createdAt-b.createdAt||(a.operationId<b.operationId?-1:a.operationId>b.operationId?1:0))
+ const sorted=[...rows].sort((a,b)=>a.createdAt-b.createdAt)
  const target=sorted.findLast(r=>(!turn||r.turn===Number(turn))&&(!chat.timeline?.branchId||r.branchId===chat.timeline.branchId))
  const availableTurns=[...new Set(sorted.filter(r=>!chat.timeline?.branchId||r.branchId===chat.timeline.branchId).map(r=>r.turn))]
  return {log:target||null,availableTurns}
@@ -46,7 +46,7 @@ function legacyRead(rows,chat,turn){
 
 const payload=(turn,operationId,branchId,extra)=>JSON.stringify({version:1,status:'prepared',turn,operationId,branchId,chatId:'fixture',sessionId:'session',outputs:[{text:'业务'+turn}],...extra})
 
-test('case1 最新按 created_at 而非最大 turn；同 created_at 由 operation_id 降序夺标',async()=>{
+test('case1 最新按 created_at 而非最大 turn；同 created_at 由实际插入顺序夺标',async()=>{
  // 第200轮的召回是更早写的（createdAt 小）：旧 max-turn 思路会错取它。
  const {root,store}=freshStore()
  try{
@@ -59,7 +59,7 @@ test('case1 最新按 created_at 而非最大 turn；同 created_at 由 operatio
   assert.equal(r.log.createdAt,5000)
   assert.deepEqual(r.availableTurns,[200,15],'availableTurns 是首次出现顺序，不是数值排序')
 
-  // 同 created_at：operation_id 字典序大者胜（非 max-turn）；共用 chat 避免反例被主键撞掉。
+  // 同 created_at：实际后插入者胜（非max-turn/字典序）；共用 chat 避免主键撞掉。
   const b=freshStore()
   try{
    seedRows(b.root,[
@@ -67,7 +67,7 @@ test('case1 最新按 created_at 而非最大 turn；同 created_at 由 operatio
     {chatId:'fixture',operationId:'op200',turn:200,branchId:'main',createdAt:9000,valueJson:payload(200,'op200','main')},
    ])
    const rb=await b.store.read({id:'fixture',timeline:{branchId:'main'}},null)
-   assert.equal(rb.log.operationId,'op200','同时间戳应以较大 operation_id 夺标')
+   assert.equal(rb.log.operationId,'op200','同时间戳应以实际后插入行夺标')
    assert.equal(rb.log.turn,200)
    assert.deepEqual(rb.availableTurns,[15,200])
   }finally{b.store.dispose();rmSync(b.root,{recursive:true,force:true})}
@@ -150,7 +150,7 @@ test('case4 availableTurns 按升序首次出现去重且保持相遇顺序，�
   assert.deepEqual(explicitNull.availableTurns,[9,3,7,1])
   const hit7=await store.read(chat,7)
   assert.equal(hit7.log.turn,7)
-  assert.equal(hit7.log.createdAt,500,'同 created_at 的两条 op7 应取字典序更大的 op7c')
+  assert.equal(hit7.log.createdAt,500,'同 created_at 的两条 op7 应取后插入的 op7c')
   assert.equal(hit7.log.operationId,'op7c')
   assert.deepEqual(hit7.availableTurns,[9,3,7,1])
  }finally{store.dispose();rmSync(root,{recursive:true,force:true})}
