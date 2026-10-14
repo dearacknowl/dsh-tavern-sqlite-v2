@@ -62,7 +62,7 @@ export function registerStandardTests(test, lifecycle) {
 
     // ⑤ 必要接线确实进了产物（failTarget / legacy guard / 宿主补丁共享入口）
     for (const rel of [CLIENT_BUILT, 'tavern-plugin/src/client/features/play-controls.js']) {
-      assert.match(after.get(rel), /get failureTarget\(\) \{ return failureViewRef\.current\.view && failureViewRef\.current\.view\.failureTarget \|\| null \}/, rel + ' 必须用稳定 ref 活取当前视图')
+      assert.match(after.get(rel), /get failureTarget\(\) \{ const liveView = failureViewRef\.current\.view; return \(liveView && \(liveView\.rollbackTarget \|\| liveView\.failureTarget\)\) \|\| null \}/, rel + ' 必须用稳定 ref 活取当前视图（统一目标：rollbackTarget 优先）')
       assert.doesNotMatch(after.get(rel), /get failureTarget\(\) \{ return state\.view/, rel + ' 不得回退为闭包 state.view')
       assert.match(after.get(rel), /const failureViewRef = React\.useRef\(state\);/, rel + ' 必须有跨 render 稳定 ref')
       assert.match(after.get(rel), /\[props\.sessionId, revision, failureTargetKey\]\);/, rel + ' 目标身份变化必须触发 effect 重建')

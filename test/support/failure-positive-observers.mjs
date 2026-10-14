@@ -13,15 +13,11 @@ const FAILURE_FIELDS = [
   'canClearIncompleteReply: latestFailureTarget(chat, replayTarget, evidence) !== null,',
   'failureTarget: latestFailureTarget(chat, previous.value.replayFailedTurn === null ? null : {turn: previous.value.replayFailedTurn}, evidence),',
 ]
-/** 窄摘要分支必须逐项在位（缺失＝退回"窄视图永远无目标"，就是本次修复要消掉的行为）。 */
-const NARROW_NEEDLES = [
-  'const narrow = chat.failureCleanup',
-  'narrow.cleanable === true',
-  'const revision = Number.isSafeInteger(chat.windowRevision) ? chat.windowRevision : chat._storageRevision',
-  'Number.isSafeInteger(revision) && Number.isSafeInteger(Number(narrow.revision)) && Number(narrow.revision) === Number(revision)',
-  'narrowTurn !== null && narrowTurn >= 1 && narrow.operationId',
-  'if (narrow && narrow.cleanable !== true && narrow.reason) return narrow.reason',
-  'const native = inspectNativeFailureTail(chat, evidence, revision)',
+/** 最终视图必须共用统一目标路径（窄摘要消费已迁 `lib/latest-send.js`：视图不再持有旧的 narrow 状态门）。
+ *  此处只核 **ACTIVE 视图产物**里真实存在的接线，不用 lib 源码文本冒称产物内容。 */
+const FINAL_VIEW_NEEDLES = [
+  'latestSendTarget(chat, evidence,',
+  'rollbackTargetTurn: latestSend?.turn',
 ]
 
 export function registerFailureTests(test, lifecycle) {
@@ -46,13 +42,17 @@ export function registerFailureTests(test, lifecycle) {
     const view = activeSource(installed.installed[VIEW_REL], VIEW_REL)
     assert.equal(view.includes('function latestFailureTarget(chat, replayTarget, evidence) {'), true, '视图必须带 latestFailureTarget 助手（含 evidence）')
     assert.equal(view.includes('function latestFailureCleanupReason(chat, replayTarget, evidence) {'), true, '视图必须带 latestFailureCleanupReason 助手（含 evidence）')
-    for (const needle of NARROW_NEEDLES) assert.equal(view.includes(needle), true, '窄摘要分支缺失：' + needle)
+    for (const needle of FINAL_VIEW_NEEDLES) assert.equal(view.includes(needle), true, '最终视图统一目标接线缺失：' + needle)
+    assert.equal(view.includes('failureEnding'), false, '退役分类 helper failureEnding 不得残留在最终视图产物')
     for (const field of FAILURE_FIELDS) assert.equal(view.includes(field), true, '视图字段接线缺失：' + field)
-    assert.equal(view.includes("'当前失败缺少可靠发轮前基准或已不是最新尾部，不能安全清理'"), true, '缺基准原因必须如实接线（不猜删）')
+    // 缺基准原因已改由后端只读 inspector 提供：视图不再持有旧文案字面量（只核真实路径）。
+    assert.equal(view.includes('inspectNativeFailureTail(chat,evidence,'), true, '缺基准原因必须由后端只读 inspector 提供')
+    assert.equal(view.includes("?.reason || ''"), true, 'inspector 的原因文本必须如实接线（不猜删）')
     // owned 垫片：applyStandardSeams 必须**真渲染**出 native-only/RPC 依赖的导出（不只 ready）
     const shimDomain = installed.installed['tavern-plugin/lib/domain/storage-rollback.js']
     assert.equal(shimDomain.includes("import { storagePackage } from './storage-package.js'"), true, 'domain 垫片必须走 storagePackage 转出')
-    assert.equal(shimDomain.includes("export const { cleanRollback, inspectNativeFailureTail, readFailureEvidence } = await storagePackage('clean-rollback')"), true, 'domain 垫片必须导出 cleanRollback/inspectNativeFailureTail/readFailureEvidence')
+    for (const name of ['cleanRollback', 'inspectNativeFailureTail', 'readFailureEvidence', 'latestSendTarget'])
+      assert.equal(new RegExp("export const \\{[^}]*\\b" + name + "\\b[^}]*\\} = await storagePackage\\('clean-rollback'\\)").test(shimDomain), true, 'domain 垫片必须导出 ' + name)
     assert.equal(shimDomain.includes('export const { cleanupAfterRollback, cleanupRollbackHeadIndex, preflightRollback, preflightRollbackAtSeq, cleanupAfterRollbackAtSeq } = impl'), true, 'domain 垫片原回退导出不得丢')
     // 视图就在 lib/domain，`./storage-rollback.js` 相对解析即该 domain 垫片；必须真 import（不是只写在常量里）
     assert.equal(VIEW_REL.includes('lib/domain/'), true, '被接线的视图必须位于 domain（相对 import 才指到该垫片）')

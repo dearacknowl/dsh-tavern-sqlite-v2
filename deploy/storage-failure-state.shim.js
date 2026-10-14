@@ -5,6 +5,9 @@
 // 真实现在本包里，上游更新碰不到。
 import { storagePackage } from './storage-package.js'
 export const {
-  ledgerFailureState, surfaceFailureState, mergeFailureState, sessionTailState, readFailureState,
+  ledgerFailureState, surfaceFailureState, mergeFailureState, sessionTailState, readFailureState, assertSendAfterCleanup,
 } = await storagePackage('failure-state')
+export function inputFailureState(chat) {
+  return ledgerFailureState(chat)
+}
 export const { foldSurfaceForEvidence } = await storagePackage('host-session-install')

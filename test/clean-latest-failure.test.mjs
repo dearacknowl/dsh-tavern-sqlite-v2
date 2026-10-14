@@ -122,13 +122,20 @@ test('失败清理只清最新失败轮24：历史失败2..22与完成轮23的�
  }finally{await f.cleanup()}
 })
 
-test('失败清理拒绝降级：表面无失败且原生已完成 ⇒ 拒绝且目标零改',async()=>{
+test('最新发送成功且原生已完成：同真实 baseline 可撤 latest，历史失败保留',async()=>{
  const f=await fixture({nativeFailedTarget:false})
  try{
-  const before=snapshot(await f.read()),events=f.mainDb.db.prepare('SELECT count(*) n FROM events').get().n
-  await assert.rejects(cleanRollback({...f.args,availability:()=>({failedTurns:[],canRollback:true}),failureTarget:f.target()}),/原生目标轮不是失败结束；拒绝降级为正常轮回退/)
-  assert.equal(snapshot(await f.read()),before,'拒绝路径不得写任何业务字段')
-  assert.equal(f.mainDb.db.prepare('SELECT count(*) n FROM events').get().n,events)
+  const before=snapshot(await f.read())
+  const result=await cleanRollback({...f.args,availability:()=>({failedTurns:[],canRollback:true}),failureTarget:f.target()})
+  assert.equal(result.turn,23,'撤的是最新一次发送，回到其前一轮')
+  const after=await f.read()
+  assert.equal(after.rollbackPending,undefined)
+  assert.deepEqual(after.hiddenDshErrorTurns,OLD_FAILED_TURNS,'21 个历史失败保持（只撤 latest，不误清历史）')
+  assert.equal(f.mainDb.db.prepare('SELECT count(*) n FROM events WHERE seq >= ?').get(f.boundary24).n,0,'目标轮事件尾已物理删除')
+  const text=JSON.stringify(f.mainDb.readAll())
+  assert.ok(text.includes('轮23') && text.includes('轮2'),'历史轮事件保持')
+  assert.ok(!text.includes('轮24'),'目标轮事件不得残留')
+  assert.notEqual(snapshot(await f.read()),before,'成功路径确实改写了目标轮')
  }finally{await f.cleanup()}
 })
 
@@ -136,7 +143,7 @@ test('失败清理拒绝历史失败：目标指向旧失败轮（非 Math.max�
  const f=await fixture()
  try{
   const before=snapshot(await f.read())
-  await assert.rejects(cleanRollback({...f.args,requestedTurn:2,failureTarget:{...f.target(),turn:2,operationId:'op2'}}),/不是当前最新失败轮，历史失败不清理/)
+  await assert.rejects(cleanRollback({...f.args,requestedTurn:2,failureTarget:{...f.target(),turn:2,operationId:'op2'}}),/撤销目标不是当前最新发送或缺少发轮前基准/)
   assert.equal(snapshot(await f.read()),before)
  }finally{await f.cleanup()}
 })
@@ -145,12 +152,12 @@ test('失败清理拒绝漂移与后继推进：revision/branch 变更或目标�
  const f=await fixture()
  try{
   const before=snapshot(await f.read())
-  await assert.rejects(cleanRollback({...f.args,failureTarget:{...f.target(),revision:f.current._storageRevision+1}}),/存储版本已变/)
-  await assert.rejects(cleanRollback({...f.args,failureTarget:{...f.target(),branchId:'branch-other'}}),/分支已变/)
+  await assert.rejects(cleanRollback({...f.args,failureTarget:{...f.target(),revision:f.current._storageRevision+1}}),/撤销目标分支或版本已变化/)
+  await assert.rejects(cleanRollback({...f.args,failureTarget:{...f.target(),branchId:'branch-other'}}),/撤销目标分支或版本已变化/)
   assert.equal(snapshot(await f.read()),before,'两种漂移拒绝后业务零改')
   await f.update(f.base.id,async chat=>{chat.messages=[...chat.messages,{role:'assistant',turn:TARGET_TURN+1,text:'轮25',swipeId:0,swipes:['轮25']}];return chat},{source:'fixture.turn25'})
   const pushed=snapshot(await f.read())
-  await assert.rejects(cleanRollback({...f.args,failureTarget:await f.liveTarget()}),/之后仍有正文行|之后仍有成功正文检查点|之后仍有任务推进/)
+  await assert.rejects(cleanRollback({...f.args,chat:await f.read(),failureTarget:await f.liveTarget()}),/之后仍有正文行|之后仍有成功正文检查点|之后仍有任务推进|撤销目标不是当前最新发送或缺少发轮前基准/)
   assert.equal(snapshot(await f.read()),pushed,'后继推进拒绝后业务零改')
  }finally{await f.cleanup()}
 })
@@ -161,7 +168,7 @@ test('失败清理拒绝无基准：缺 businessBefore/rowBefore ⇒ 明确 reas
   const before=snapshot(await f.read())
   await f.update(f.base.id,async chat=>{delete chat.timeline.operations.body.businessBefore;return chat},{source:'fixture.drop-baseline'})
   const drifted=snapshot(await f.read())
-  await assert.rejects(cleanRollback({...f.args,failureTarget:await f.liveTarget()}),/缺少该轮业务回退基准/)
+  await assert.rejects(cleanRollback({...f.args,chat:await f.read(),failureTarget:await f.liveTarget()}),/缺少[^，]*前基准/)
   assert.equal(snapshot(await f.read()),drifted)
   assert.notEqual(drifted,before,'夹具确实去掉了基准')
  }finally{await f.cleanup()}
@@ -219,7 +226,7 @@ test('失败清理已清且历史失败仍在：重复同目标 changed 无写�
   // 目标 op 缺 且 事件尾已推进（玩家继续玩）：目标已变 ⇒ 明确拒绝且一条不删，不得误报 alreadyClean。
   f.appendTurn(TARGET_TURN+1,'轮25')
   const pushed=snapshot(await f.read()),eventsPushed=f.mainDb.db.prepare('SELECT count(*) n FROM events').get().n
-  await assert.rejects(cleanRollback({...f.args,requestedTurn:await f.liveTarget(),availability:historicalFailed}),/目标已变化|状态不明确/)
+  await assert.rejects(cleanRollback({...f.args,chat:await f.read(),requestedTurn:await f.liveTarget(),availability:historicalFailed}),/目标已变化|状态不明确|撤销目标不是当前最新发送或缺少发轮前基准/)
   assert.equal(snapshot(await f.read()),pushed,'目标已变拒绝路径不得删任何正文')
   assert.equal(f.mainDb.db.prepare('SELECT count(*) n FROM events').get().n,eventsPushed)
  }finally{await f.cleanup()}
@@ -277,13 +284,20 @@ test('失败清理无目标重试拒绝：pending带failureTarget时不得以普
  }finally{await f.cleanup()}
 })
 
-test('普通回退不传 failureTarget 保持原语义：仍按最早失败（Math.min）执行',async()=>{
+test('普通回退不传 failureTarget：只撤最新24并保留历史失败2..22及完成23',async()=>{
  const f=await fixture()
  try{
   const result=await cleanRollback({...f.args,requestedTurn:null})
-  assert.equal(result.turn,1,'无失败清理目标时按原语义回到最早失败轮之前')
+  assert.equal(result.turn,23,'只撤最新24：落点为23')
+  assert.equal(result.rolledBack.hiddenTurn,TARGET_TURN,'hiddenTurn 必须是 24')
   const after=await f.read()
-  assert.deepEqual(after.hiddenDshErrorTurns,undefined)
+  assert.deepEqual(after.messages,f.base.messages,'轮24半截消息必须清掉，历史消息逐字保留')
+  assert.equal(after.variables.hp,23,'变量回到轮23基准')
+  assert.deepEqual(after.hiddenDshErrorTurns,OLD_FAILED_TURNS,'历史失败2..22 的隐藏清单保留')
+  const keys=Object.keys(after.timeline.operations)
+  for(const n of OLD_FAILED_TURNS)assert.ok(keys.includes('op'+n),'历史失败 op'+n+' 必须保留')
+  assert.equal(keys.some(key=>{const op=after.timeline.operations[key];return op.kind==='body'&&Number(op.turn)===TARGET_TURN}),false,'轮24 body op 必须删除')
+  assert.equal(f.session.seq,f.boundary24,'Session 游标回到 boundary24（无轮24事件）')
   assert.equal(after.rollbackPending,undefined)
   assert.equal(rollbackSchedulingBarrier.has(f.session.id),false)
  }finally{await f.cleanup()}

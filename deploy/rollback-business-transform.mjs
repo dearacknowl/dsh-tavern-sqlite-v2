@@ -109,17 +109,24 @@ export function applyRollbackBusinessTurnTransform(source) {
   const legacyFence=`function assertRollbackBodyPreparation(chat) {
   if(Object.values(chat.timeline?.operations || {}).some(op=>op.kind==='body' && op.status==='failed' && (!op.basedOn?.branchId || op.basedOn.branchId===chat.timeline?.branchId)))throw new Error('失败正文必须先统一物理清理，再准备新回合；禁止直接重试覆盖回退基准')
 }`
+  // 发送守卫合同：失败轮必须先物理清理；同一 operation 的已清理重试由 latest-send/回退回执解除，不能靠状态白名单放行；
+  // 账本守卫与可执行清理目标必须同源，避免守卫要求先清而回退不认目标。
   const sharedFence=`function assertRollbackBodyPreparation(chat) {
+  // 最新发送撤销走统一目标；准备期仅拦「物理回退未完成」，不按失败账本/终态筛选。
+  const failed = ledgerFailureState(chat).pendingCleanupTurns
+   if(chat.rollbackPending || failed.length)throw new Error('上轮错误或未确认完成的发送尚未物理清理：请先回退或清理，再继续发送')
+}`
+  // 旧代（已按失败账本强制清理）就地升级，不能一见 marker 就跳过。
+  const retiredFence=`function assertRollbackBodyPreparation(chat) {
   // 与回退编排同读一份失败状态投影（lib/failure-state.js）——两侧判据必须同源，
   // 否则"守卫要求先清理、回退不认这个失败"会互相等待（缺陷 A）。
   if(ledgerFailureState(chat).pendingCleanupTurns.length)throw new Error('失败正文必须先统一物理清理，再准备新回合；禁止直接重试覆盖回退基准')
 }`
   function failedBodyFence(value) {
-    if(value.includes(sharedFence)) {
-      if(!value.includes(fenceImport))throw Error('失败正文守卫缺少 ledgerFailureState 导入')
-      return value
-    }
-    if(value.includes(legacyFence)) {
+    if(value.includes(sharedFence)) return value
+    if(value.includes(retiredFence)) {
+      value=value.replace(retiredFence,sharedFence)
+    } else if(value.includes(legacyFence)) {
       value=value.replace(legacyFence,sharedFence)
     } else {
       let next=guard+'\n'+sharedFence+'\n'+value

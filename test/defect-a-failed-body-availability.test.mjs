@@ -190,15 +190,15 @@ test('缺陷A：失败轮在事件流里有痕迹（普通失败轮）⇒ 仍走
 
 const REFUSALS = /当前没有可回退|没有安全回退目标|回退预检/
 
-test('回归：没有账本失败证据时可用性路径仍响亮拒绝（不把"无事可做"当成功）', async () => {
+test('回归：最新发送没有真实前像仍响亮拒绝且零删库', async () => {
   const f = await harness({ ledgerFailedTurn: null, eventStreamHasTurn53: false })
   f.args.availability = () => ({ failedTurns: [], canRollback: false, reason: '当前没有可回退的已提交轮次' })
   f.args.requestedTurn = 53
-  await assert.rejects(cleanRollback(f.args), REFUSALS)
+  await assert.rejects(cleanRollback(f.args), /最新发送缺少完整发轮前基准，未删除任何数据/)
   assert.deepEqual(f.truncated, [], '拒绝时不得碰库')
 })
 
-test('回归：账本失败轮连上一轮 turn/end 都没有 ⇒ 仍走轮次轴拒绝（不凭 turn/start 删会话头）', async () => {
+test('回归：账本失败轮连上一轮 turn/end 都没有 ⇒ 有真实基准时按 52 业务恢复、会话前缀不动', async () => {
   const f = await harness({ ledgerFailedTurn: 53, eventStreamHasTurn53: false })
   // 只留一条会话头/种子，抹掉 52 的 turn/end ⇒ rollbackBoundarySeq 返回 -1。
   f.session.log.length = 0
@@ -206,14 +206,23 @@ test('回归：账本失败轮连上一轮 turn/end 都没有 ⇒ 仍走轮次�
   f.session.surfaceManager._nodes = [0]
   f.session.surfaceManager._lastProcessedSeq = 0
   f.args.availability = () => ({ failedTurns: [], canRollback: false, reason: 'x' })
-  await assert.rejects(cleanRollback(f.args), REFUSALS)
-  assert.deepEqual(f.truncated, [], '拒绝时不得碰库')
+  // body53 有真实发轮前基准 ⇒ 准备期 53 不应被拒：按 52 恢复业务；预检允许 boundary0 的 no-op truncate。
+  const beforeEvents = structuredClone(f.session.snapshotEvents())
+  const result = await cleanRollback(f.args)
+  assert.equal(result.turn, 52, '有真实基准时恢复上一轮（52）业务')
+  assert.deepEqual(f.truncated, [0], 'boundary0 的 current no-op 截断记录（truncateEvents(header,0)）')
+  assert.deepEqual(f.session.snapshotEvents(), beforeEvents, '会话前缀（header/seq0 种子）完整：log 无变化')
+  assert.equal(f.session.log.length, 1, '会话头/种子保留，不凭 turn/start 删会话头')
+  assert.equal(f.session.log[0].seq, 0, '前缀坐标不变')
 })
 
 test('回归：basedOn.branchId 指向其它分支的失败 body 不并进 failedTurns（与守卫同判据）', async () => {
   const f = await harness({ ledgerFailedTurn: 53, eventStreamHasTurn53: false })
   // cleanRollback 会重新 readChat ⇒ 必须改**库里的**那份，不是 args.chat 的副本。
   f.patch(chat => { chat.timeline.operations.body53.basedOn = { branchId: 'branch-other', revision: 52 } })
-  await assert.rejects(cleanRollback(f.args), REFUSALS)
+  const patched = await f.read()
+  // 错 branch 且无 cp 真实基准 ⇒ 仍拒（不放宽 branch 负例）；拒绝语义按最新缺前像文案。
+  await assert.rejects(cleanRollback(f.args), /最新发送缺少完整发轮前基准|缺少[^，]*前基准|不是当前最新发送/)
   assert.deepEqual(f.truncated, [], '拒绝时不得碰库')
+  assert.deepEqual(await f.read(), patched, '拒绝路径不改业务快照（零写）')
 })

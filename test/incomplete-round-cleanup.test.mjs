@@ -3,6 +3,9 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
 import vm from 'node:vm'
+import {applyLatestSendViewTransform} from '../deploy/latest-send-view-transform.mjs'
+import {latestSendTarget} from '../lib/latest-send.js'
+import {parse} from '../lib/vendor/acorn/acorn.mjs'
 import path from 'node:path'
 import {DatabaseSync} from 'node:sqlite'
 import {applyStandardSeams,uninstallStandardSeams} from '../deploy/standard-seams.mjs'
@@ -10,6 +13,7 @@ import {prepareCommentAuthorTree,activeSource} from './fixtures/comment-author-t
 import {queryFailureCleanup} from '../lib/chat-query-service.js'
 import {createSessionWindowProjector,REQUIRED_FUNCTIONS,REQUIRED_VALUES,createActivitySummaryBridge} from '../lib/session-window-projector.js'
 import {inspectNativeFailureTail} from '../lib/clean-rollback.js'
+import {preflightRollbackAtSeq} from '../lib/rollback-cleanup.js'
 import {applyLatestFailureHostTransform,applyLatestFailureViewTransform} from '../deploy/latest-failure-transform.mjs'
 import {applyForegroundQuiescenceTransform,applySettlementQuiescenceTransform} from '../deploy/rollback-quiescence-transform.mjs'
 import {composedFailureViewText,readLatestFailureSource} from './support/latest-failure-source.mjs'
@@ -23,15 +27,21 @@ const idle={cleanupIdle:true,foregroundActive:false,backgroundActive:false,activ
 const evidenceOf=(events=eventsOf(),flags={})=>({session:{header:{id:'session-incomplete'}},events,...idle,...flags})
 const inspect=(chat=chatOf(),evidence=evidenceOf())=>inspectNativeFailureTail(chat,evidence,chat._storageRevision)
 const bodyFailed=()=>{const chat=chatOf();chat.messages.push({role:'assistant',turn:7,text:'a7'});chat.timeline.operations.body7={id:'body7',kind:'body',status:'completed',turn:7,committedBranchId:'branch-live',background:{phase:'failed'},businessBefore:{version:1,fields:{variables:{hp:6}},messageCount:2,participants:{},operationIds:['body6'],operationStates:{body6:chat.timeline.operations.body6}}};chat.timeline.checkpoints.push({id:'cp7',turn:7});return chat}
-test('不完整清理A：仅前后台静止与明确未登记完整尾轮可签，部分推进和未知事件拒绝',()=>{
+test('不完整清理A：活动态不决定签出，未知事件本身不拒，错引用与坐标不连续仍拒',()=>{
  const chat=chatOf(),result=inspect(chat)
  assert.deepEqual(result.target,{kind:'native-only',incomplete:true,chatId:chat.id,sessionId:chat.sessionId,turn:7,branchId:'branch-live',revision:11,endSeq:5,eventCount:6})
- for(const flags of [{cleanupIdle:false},{foregroundActive:true},{backgroundActive:true},{activity:{phase:'pending',busy:false}},{activity:{phase:'running',busy:true}}])assert.equal(inspect(chat,evidenceOf(undefined,flags)).target,null)
- for(const modify of [c=>{c.messages.push({role:'assistant',turn:7})},c=>{c.timeline.checkpoints.push({turn:7})},c=>{c.timeline.participants.p={turn:7}},c=>{c.regeneratedDshTurns={7:8}},c=>{c.timeline.operations.partial={kind:'agent',turn:7}}]){const c=chatOf();modify(c);assert.equal(inspect(c).target,null)}
- for(const type of ['tool/result','assistant/action','unknown/event','user/message']){const events=eventsOf();events.push({seq:6,type,data:{turn:8}});assert.equal(inspect(chat,evidenceOf(events)).target,null)}
+ // 活动/前后台忙不再决定资格：target 仍可签（消费者自己决定是否点击），不因 busy 变 null
+ for(const flags of [{cleanupIdle:false},{foregroundActive:true},{backgroundActive:true},{activity:{phase:'pending',busy:false}},{activity:{phase:'running',busy:true}}])assert.equal(inspect(chat,evidenceOf(undefined,flags)).target?.incomplete,true,'活动态不得取消签出资格')
+ for(const modify of [c=>{c.messages.push({role:'assistant',turn:7})},c=>{c.timeline.checkpoints.push({turn:7})},c=>{c.timeline.participants.p={turn:7}},c=>{c.timeline.operations.partial={kind:'agent',turn:7}}]){const c=chatOf();modify(c);assert.equal(inspect(c).target,null)}
+ // 未知事件类型本身不再拒（交纯尾与引用链预检）
+ for(const type of ['tool/result','assistant/action','unknown/event']){const events=eventsOf();events.push({seq:6,type,data:{turn:8}});assert.equal(inspect(chat,evidenceOf(events)).target?.incomplete,true,'未知事件类型本身不得拒')}
+ // 外来 source 归属不在此层校验：inspector 只判身份/连续 seq/已有业务/owned runtime（failure-cleanup-target.js），
+ // source/reference 安全由下游 preflight 负责；此处不伪造"不安全引用可签＝安全删除"的期待。
+ const latest=eventsOf();latest.push({seq:6,type:'turn/start',data:{turn:8}});assert.equal(inspect(chat,evidenceOf(latest)).target?.incomplete,true,'最新 turn/start 未 end 也可签')
  const broken=eventsOf();broken[3].seq=9;assert.equal(inspect(chat,evidenceOf(broken)).target,null)
- assert.equal(inspect(chat,evidenceOf(eventsOf().slice(0,-1))).target,null)
- assert.equal(inspect(chat,{events:eventsOf()}).target,null)
+ assert.equal(inspect(chat,evidenceOf(eventsOf().slice(0,-1))).target?.turn,7,'未end不改变最新发送身份')
+ assert.equal(inspect(chat,{events:eventsOf()}).target?.turn,7,'签出不要求idle旁证')
+ const noIdentity=chatOf();delete noIdentity.sessionId;assert.equal(inspect(noIdentity).target,null,'缺实际会话身份仍拒')
 })
 test('不完整清理原生尾：用户入队与旧帧精确替换可保前缀，工具块或错误引用拒绝',()=>{
  const chat=chatOf(),trace={chatId:chat.id,turn:6,operationId:'operation6',frameId:'frame6',branchId:'prior',basedOnRevision:5},source={kind:'plugin',plugin:'dsh-tavern',form:'foreground-frame',trace}
@@ -43,11 +53,17 @@ test('不完整清理原生尾：用户入队与旧帧精确替换可保前缀�
   {seq:6,type:'user/message',data:{...old.data,content:[{type:'text',text:'retained old context'}]},sourceEventSeqs:[0],surfaceOp:{op:'replace',startSeq:0,endSeq:0}},
   ...eventsOf().slice(3).map((event,index)=>({...event,seq:7+index}))]
  assert.equal(inspect(chat,evidenceOf(events)).target?.incomplete,true)
- const unsafe=structuredClone(events);unsafe[6].sourceEventSeqs=[5];unsafe[6].surfaceOp.startSeq=5;unsafe[6].surfaceOp.endSeq=5;assert.equal(inspect(chat,evidenceOf(unsafe)).target,null)
- const foreign=structuredClone(events);foreign[3].data.inserted[0].source={kind:'plugin',plugin:'unknown'};assert.equal(inspect(chat,evidenceOf(foreign)).target,null)
- const tool=eventsOf();tool[4].data.message.content.push({type:'tool-call',name:'unknown'});assert.equal(inspect(chat,evidenceOf(tool)).target,null)
+ // 全部被删除的事件间引用无需保留；真正危险的是保留前缀仍引用已删尾段。
+ const diagnose=log=>preflightRollbackAtSeq({log,header:{id:chat.sessionId},surfaceManager:{},snapshotEvents:()=>log},2,{strict:false,foregroundExact:true})
+ assert.equal(diagnose(events).ok,true,'完整尾段可删；未传运行接线仅诊断边界与引用')
+ const unsafe=structuredClone(events);unsafe[0].sourceEventSeqs=[5]
+ const preflight=diagnose(unsafe)
+ assert.equal(preflight.ok,false,'保留前缀引用待删尾须拒')
+ assert.equal(preflight.violations[0].code,'DANGLING_REFERENCE','必须命中实际引用护栏')
+ // foreign source（plugin 归属）同样交下游 preflight：inspector 只判身份/连续 seq/已有业务/owned runtime。
+ const tool=eventsOf();tool[4].data.message.content.push({type:'tool-call',name:'unknown'});assert.equal(inspect(chat,evidenceOf(tool)).target?.incomplete,true,'工具块本身不再拒（清单合同已退役）')
 })
-test('正常结算轮：已登记正文的后台失败、成功、未更新与重试均不新增异常清理',()=>{
+test('正常结算轮：已登记业务在各后台phase同一前像均可撤销',()=>{
  const db=new DatabaseSync(':memory:')
  try {
   db.exec('CREATE TABLE archive_timeline_nodes(node_key TEXT,value_json TEXT); CREATE TABLE archive_messages(message_json TEXT)')
@@ -56,36 +72,31 @@ test('正常结算轮：已登记正文的后台失败、成功、未更新与�
    assert.equal(inspect(chat).target,null)
    db.exec('DELETE FROM archive_timeline_nodes')
    db.prepare('INSERT INTO archive_timeline_nodes VALUES (?,?)').run('operations:body7',JSON.stringify(chat.timeline.operations.body7))
-   assert.equal(queryFailureCleanup(db,{revision:11,timeline:chat.timeline}).cleanable,false)
+   assert.equal(queryFailureCleanup(db,{revision:11,timeline:chat.timeline}).cleanable,true,'已登记业务同一前像 ⇒ 各 phase 均可撤销')
   }
  } finally {db.close()}
  const rowOnly=chatOf();rowOnly.messages.push({role:'assistant',turn:7,mvu:{receipt:{status:'unchanged'}}});assert.equal(inspect(rowOnly).target,null)
 })
-test('不完整清理接线：真实视图helper将遗留错误轮接入，活动态与正常成功全不显示',async()=>{
- const source=applyLatestFailureViewTransform(await composedFailureViewText())
- assert.equal(applyLatestFailureViewTransform(source),source)
- const gateStart=source.indexOf('  // 前后台静止门'),gateEnd=source.indexOf('  // 终止失败生命周期',gateStart)
- const reasonStart=source.indexOf('  // 活动态不提示错误'),reasonEnd=source.indexOf('  // native 挡住',reasonStart)
- const oldReason=`  // 活动/成功/无轮先截断说明（pending-retry 说明仍优先）：不让 native inspector 对 running body 的“须清理”文案漏出
-  if ((ending === 'active' || ending === 'completed' || ending === 'none') && !(chat.rollbackPending && chat.rollbackPending.failureTarget)) return ''
-  const native = inspectNativeFailureTail(chat, evidence, revision)
-`
- const previous=source.slice(0,gateStart)+source.slice(gateEnd,reasonStart)+oldReason+source.slice(reasonEnd)
- assert.equal(applyLatestFailureViewTransform(previous),source,'045完整旧helper可原位升级')
- assert.throws(()=>applyLatestFailureViewTransform(previous.replace('function latestFailureTarget(', 'function missingTarget(')),/不完整/)
- const begin=source.indexOf('function latestFailureTarget('),end=source.indexOf("import ",begin)
+test('不完整清理接线：真实视图helper与统一目标同用真实前像，活动及成功均可撤',async()=>{
+ const source=applyLatestSendViewTransform(await composedFailureViewText())
+ assert.equal(applyLatestSendViewTransform(source),source,'实际最后施缝须幂等')
+ assert.throws(()=>applyLatestSendViewTransform(source.replace('function latestFailureTarget(', 'function missingTarget(')),/缺失|不唯一/)
+ const nodes=parse(source,{ecmaVersion:'latest',sourceType:'module'}).body.filter(n=>n.type==='FunctionDeclaration'&&['latestFailureTarget','latestFailureCleanupReason'].includes(n.id?.name))
+ assert.equal(nodes.length,2)
  const context=vm.createContext({inspectNativeFailureTail})
- vm.runInContext(source.slice(begin,end)+'\n globalThis.targetOf=latestFailureTarget;globalThis.reasonOf=latestFailureCleanupReason;',context)
+ vm.runInContext(nodes.map(n=>source.slice(n.start,n.end)).join('\n')+'\n globalThis.targetOf=latestFailureTarget;globalThis.reasonOf=latestFailureCleanupReason;',context)
  assert.equal(context.targetOf(chatOf(),null,evidenceOf()).incomplete,true)
- assert.match(context.reasonOf(chatOf(),null,evidenceOf()),/未登记/)
- assert.equal(context.targetOf(chatOf(),null,undefined),null)
- assert.equal(context.targetOf(bodyFailed(),null,evidenceOf()),null)
- const toolEvidence=evidenceOf();toolEvidence.events[4].data.message.content.push({type:'tool-call'});assert.match(context.reasonOf(chatOf(),null,toolEvidence),/工具调用/)
- assert.match(source,/canRollback: rollbackState.canRollback \|\| latestFailureTarget/)
- assert.match(source,/rollbackTargetTurn: latestFailureTarget\(chat, replayTarget, evidence\)\?\.turn/)
- for(const flags of [{cleanupIdle:false},{foregroundActive:true},{backgroundActive:true},{activity:{phase:'pending',busy:false}},{activity:{phase:'running',busy:true}}])assert.equal(context.targetOf(chatOf(),null,evidenceOf(undefined,flags)),null)
- const normal=bodyFailed();normal.timeline.operations.body7.background.phase='completed';assert.equal(context.targetOf(normal,null,evidenceOf()),null)
- for(const flags of [{backgroundActive:true},{activity:{phase:'pending',busy:false}}])assert.equal(context.reasonOf(chatOf(),null,evidenceOf(undefined,flags)),'')
+ assert.equal(context.reasonOf(chatOf(),null,evidenceOf()),'')
+ assert.equal(context.targetOf(chatOf(),null,undefined),null,'无实际原生证据不得猜空尾')
+ assert.equal(context.targetOf(bodyFailed(),null,evidenceOf()),null,'已登记业务不得空尾清理')
+ for(const flags of [{cleanupIdle:false},{foregroundActive:true},{backgroundActive:true},{activity:{phase:'pending',busy:false}},{activity:{phase:'running',busy:true}}])assert.equal(context.targetOf(chatOf(),null,evidenceOf(undefined,flags)).turn,7)
+ const normal=bodyFailed();normal.timeline.operations.body7.background.phase='completed'
+ for(const chat of [bodyFailed(),normal]){
+  const target=latestSendTarget(chat,evidenceOf());assert.equal(target.kind,'rollback');assert.equal(target.turn,7)
+ }
+ const toolEvidence=evidenceOf();toolEvidence.events[4].data.message.content.push({type:'tool-call'});assert.equal(context.targetOf(chatOf(),null,toolEvidence).turn,7)
+ assert.match(source,/rollbackTargetTurn: latestSend\?\.turn \?\? keepLegacyTarget\?\.turn/)
+ assert.match(source,/failureTarget: latestSend !== null \? latestSend : keepLegacyTarget/)
 })
 test('不完整清理接线：标准装卸真实作者树导出运行器与实时DI，保留现场源码',()=>{
  const f=prepareCommentAuthorTree();assert.ok(f)
@@ -114,7 +125,8 @@ test('不完整清理接线：共享UI真实控件活动时隐藏，目标坐标
  plugin.apply({sessions:{subagentAddress:()=>null,waitForTavernRollbackSync:async()=>{waited++}},get:name=>name==='tavernStorageView'?bridge:undefined,provide:(_key,value)=>{ui=value},effect:fn=>fn(),emit:()=>{},slots:{inject:(_name,fn)=>fn(),register:(meta,render)=>{regs.push({meta,render});return ()=>{}}}})
  const render=()=>{const wrapper=regs.find(reg=>reg.meta.id.endsWith(':failure-clean')).render({sessionId:'session-incomplete',useSession:fn=>fn({running:false})});return wrapper.type(wrapper.props)}
  assert.ok(render())
- for(const activity of [{phase:'pending',busy:false},{phase:'running',busy:true},{phase:'failed',busy:true}]){snapshot={view:{...snapshot.view,activity}};assert.equal(render(),null);await assert.rejects(ui.cleanFailure('session-incomplete',7,inspect().target),/活动/)}
+ for(const activity of [{phase:'pending',busy:false},{phase:'running',busy:true},{phase:'failed',busy:true}]){snapshot={view:{...snapshot.view,activity}};assert.ok(render());await ui.cleanFailure('session-incomplete',7,inspect().target)}
+ requests=0;waited=0
  snapshot={view:{failureTarget:inspect().target,activity:{phase:'idle',busy:false}}}
  await assert.rejects(ui.cleanFailure('session-incomplete',7,{...inspect().target,incomplete:undefined}),/不一致/)
  await assert.rejects(ui.cleanFailure('session-incomplete',7,{...inspect().target,endSeq:6,eventCount:7}),/不一致/)
@@ -135,7 +147,7 @@ test('不完整清理窗口：真实投影将chat身份与同快照后台活动�
  const projector=createSessionWindowProjector(deps)
  const result=await projector.project({chat,window,activity:idle.activity})
  assert.equal(result.view.target?.incomplete,true);assert.deepEqual(calls,[[chat.sessionId,chat.id]])
- const pending={phase:'pending',busy:false};const active=await projector.project({chat,window,activity:pending});assert.equal(active.view.evidence.activity,pending);assert.equal(active.view.target,null)
+ const pending={phase:'pending',busy:false};const active=await projector.project({chat,window,activity:pending});assert.equal(active.view.evidence.activity,pending);assert.equal(active.view.target?.turn,7,'实时活动证据透传，但不决定最新发送资格')
 })
 test('不完整清理接线：实际宿主闭包读取前台和后台运行器，缺证明明确拒绝',async()=>{
  const raw=readLatestFailureSource('tavern-plugin/lib/index.js'),source=applyLatestFailureHostTransform(raw)

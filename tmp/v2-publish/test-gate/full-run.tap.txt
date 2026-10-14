@@ -1,0 +1,2878 @@
+TAP version 13
+# [rollback-cleanup] background-original: 运行时轮次计数回拨 phase.lastTurn 1 → 0
+# [rollback-cleanup] background-original: 运行时轮次计数回拨 phase.lastTurn 1 → 0
+# [rollback-cleanup] background-original: 运行时轮次计数回拨 phase.lastTurn 1 → 0
+# [rollback-cleanup] background-original: 运行时轮次计数回拨 phase.lastTurn 1 → 0
+# [rollback-cleanup] background-original: 运行时轮次计数回拨 phase.lastTurn 1 → 0
+# Subtest: 旧创建切点在descriptor之前：连续初始化前缀保身份，真正轮内切点仍拒绝
+ok 1 - 旧创建切点在descriptor之前：连续初始化前缀保身份，真正轮内切点仍拒绝
+  ---
+  duration_ms: 82.8873
+  type: 'test'
+  ...
+# Subtest: 已修复尾部身份的后台再次回退：仅重建同一身份、业务尾物理零残留、官方打开校验通过
+ok 2 - 已修复尾部身份的后台再次回退：仅重建同一身份、业务尾物理零残留、官方打开校验通过
+  ---
+  duration_ms: 50.8382
+  type: 'test'
+  ...
+# Subtest: 现场v1部署缝升级：登记切点移到descriptor后且重复施缝幂等
+ok 3 - 现场v1部署缝升级：登记切点移到descriptor后且重复施缝幂等
+  ---
+  duration_ms: 0.7064
+  type: 'test'
+  ...
+# Subtest: 首轮任务入队随纯尾删除：正常身份保留且官方队列为空
+ok 4 - 首轮任务入队随纯尾删除：正常身份保留且官方队列为空
+  ---
+  duration_ms: 56.4319
+  type: 'test'
+  ...
+# Subtest: 首轮任务入队随纯尾删除：尾部修复身份保留且官方队列为空
+ok 5 - 首轮任务入队随纯尾删除：尾部修复身份保留且官方队列为空
+  ---
+  duration_ms: 61.5501
+  type: 'test'
+  ...
+# Subtest: 首轮任务入队随纯尾删除：尚未turn/start保留且官方队列为空
+ok 6 - 首轮任务入队随纯尾删除：尚未turn/start保留且官方队列为空
+  ---
+  duration_ms: 71.2452
+  type: 'test'
+  ...
+# [rollback-cleanup] background-synthetic: 运行时轮次计数回拨 phase.lastTurn 9 → 1
+# [rollback-cleanup] background-synthetic: 运行时轮次计数回拨 phase.lastTurn 1 → 0
+# [rollback-cleanup] background-synthetic: 运行时轮次计数回拨 phase.lastTurn 9 → 1
+# [rollback-cleanup] background-synthetic: 运行时轮次计数回拨 phase.lastTurn 9 → 1
+# Subtest: seq 预检：边界取该后台会话自己的 seq（与前台 turn 编号无关）
+ok 7 - seq 预检：边界取该后台会话自己的 seq（与前台 turn 编号无关）
+  ---
+  duration_ms: 1.3583
+  type: 'test'
+  ...
+# Subtest: seq 预检：rewindTo=-1（新建 participant）⇒ 保留第一个 turn/start 之前的初始事件
+ok 8 - seq 预检：rewindTo=-1（新建 participant）⇒ 保留第一个 turn/start 之前的初始事件
+  ---
+  duration_ms: 0.1828
+  type: 'test'
+  ...
+# Subtest: seq 预检：rewindTo=-1 且 turn/start 就是第一条 ⇒ 拒绝（禁止盲删 metadata/会话头）
+ok 9 - seq 预检：rewindTo=-1 且 turn/start 就是第一条 ⇒ 拒绝（禁止盲删 metadata/会话头）
+  ---
+  duration_ms: 0.3293
+  type: 'test'
+  ...
+# Subtest: seq 预检：整个落在边界内 ⇒ 核对过的 noop（不是"猜不出来当成功"）
+ok 10 - seq 预检：整个落在边界内 ⇒ 核对过的 noop（不是"猜不出来当成功"）
+  ---
+  duration_ms: 0.1417
+  type: 'test'
+  ...
+# Subtest: seq 预检：边界把某一轮切一半 ⇒ 拒绝（只允许整轮边界）
+ok 11 - seq 预检：边界把某一轮切一半 ⇒ 拒绝（只允许整轮边界）
+  ---
+  duration_ms: 0.1696
+  type: 'test'
+  ...
+# Subtest: seq 预检：真实 turn1 会话里固定种子(turn:1) 不得被 -1 判成切半轮（回归 seq 边界 6）
+ok 12 - seq 预检：真实 turn1 会话里固定种子(turn:1) 不得被 -1 判成切半轮（回归 seq 边界 6）
+  ---
+  duration_ms: 0.5546
+  type: 'test'
+  ...
+# Subtest: seq 预检：真实 turn1 会话里边界 8 落在轮中间仍拒（不放宽中间删除）
+ok 13 - seq 预检：真实 turn1 会话里边界 8 落在轮中间仍拒（不放宽中间删除）
+  ---
+  duration_ms: 0.139
+  type: 'test'
+  ...
+# Subtest: seq 预检：待删段混入低 seq 事件 ⇒ NOT_PURE_TAIL；保留段引用被删 seq ⇒ DANGLING_REFERENCE
+ok 14 - seq 预检：待删段混入低 seq 事件 ⇒ NOT_PURE_TAIL；保留段引用被删 seq ⇒ DANGLING_REFERENCE
+  ---
+  duration_ms: 0.2478
+  type: 'test'
+  ...
+# Subtest: seq预检：已结束轮后的旧空替换随纯尾删除，重新生成后仍可回退
+ok 15 - seq预检：已结束轮后的旧空替换随纯尾删除，重新生成后仍可回退
+  ---
+  duration_ms: 1.4484
+  type: 'test'
+  ...
+# Subtest: seq 预检：L1.5 required counter 拿不到有效数 ⇒ 硬拒（NaN 同样不可完成）
+ok 16 - seq 预检：L1.5 required counter 拿不到有效数 ⇒ 硬拒（NaN 同样不可完成）
+  ---
+  duration_ms: 1.0253
+  type: 'test'
+  ...
+# Subtest: seq 预检：接线缺失 ⇒ 各自明确拒绝
+ok 17 - seq 预检：接线缺失 ⇒ 各自明确拒绝
+  ---
+  duration_ms: 0.2494
+  type: 'test'
+  ...
+# Subtest: seq 清理：-1（变量结算）物理回退保留固定种子，drain→截断→cache→L1.5 归零
+ok 18 - seq 清理：-1（变量结算）物理回退保留固定种子，drain→截断→cache→L1.5 归零
+  ---
+  duration_ms: 0.3894
+  type: 'test'
+  ...
+# Subtest: seq 清理：drain → 单事务截断（用解析后的前缀 seq）→ 内存就地重建 → 投影重折 → L1.5（后台 agent）
+not ok 19 - seq 清理：drain → 单事务截断（用解析后的前缀 seq）→ 内存就地重建 → 投影重折 → L1.5（后台 agent）
+  ---
+  duration_ms: 0.7778
+  type: 'test'
+  location: 'D:\\工作目录\\Leopold\\dsh-tavern\\plugins\\dsh-tavern-sqlite-v2\\test\\background-rollback.test.mjs:273:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    5 !== 3
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 3
+  actual: 5
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/test/background-rollback.test.mjs:285:10)
+    async Test.run (node:internal/test_runner/test:1389:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+  ...
+# Subtest: seq 清理：边界不合法 ⇒ 抛错且一次都不碰库；noop ⇒ 不碰库也不算"已物理回退"
+not ok 20 - seq 清理：边界不合法 ⇒ 抛错且一次都不碰库；noop ⇒ 不碰库也不算"已物理回退"
+  ---
+  duration_ms: 0.6908
+  type: 'test'
+  location: 'D:\\工作目录\\Leopold\\dsh-tavern\\plugins\\dsh-tavern-sqlite-v2\\test\\background-rollback.test.mjs:291:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    noop 不得触发 drain/截断/重折
+    + actual - expected
+    
+    + [
+    +   'drain:background-synthetic',
+    +   'truncate:4',
+    +   'hydrate',
+    +   'cache.write'
+    + ]
+    - []
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0: 'drain:background-synthetic'
+    1: 'truncate:4'
+    2: 'hydrate'
+    3: 'cache.write'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/test/background-rollback.test.mjs:305:10)
+    async Test.run (node:internal/test_runner/test:1389:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+  ...
+# Subtest: 真实后台入口：不调用软回退，等待物理回退后才继续；缺接线/失败不继续
+ok 21 - 真实后台入口：不调用软回退，等待物理回退后才继续；缺接线/失败不继续
+  ---
+  duration_ms: 2.3298
+  type: 'test'
+  ...
+# Subtest: 真实后台入口：变量结算 rewindTo:-1 也 await 物理回退并登记 seq 归属
+ok 22 - 真实后台入口：变量结算 rewindTo:-1 也 await 物理回退并登记 seq 归属
+  ---
+  duration_ms: 1.247
+  type: 'test'
+  ...
+# Subtest: Host消费者：动态拿真实服务与后台agent，无systemd/前台turn反推
+ok 23 - Host消费者：动态拿真实服务与后台agent，无systemd/前台turn反推
+  ---
+  duration_ms: 0.2679
+  type: 'test'
+  ...
+# Subtest: 浏览器facade常见静态形式保留浏览器；纯MVU、注释和描述字符串不迁端
+ok 24 - 浏览器facade常见静态形式保留浏览器；纯MVU、注释和描述字符串不迁端
+  ---
+  duration_ms: 1.9214
+  type: 'test'
+  ...
+# Subtest: 旧失败脚本不再送入VM；混合卡的纯MVU核心与派生钩子仍真实服务端执行
+ok 25 - 旧失败脚本不再送入VM；混合卡的纯MVU核心与派生钩子仍真实服务端执行
+  ---
+  duration_ms: 6.1163
+  type: 'test'
+  ...
+# Subtest: 生命周期仍要求派发浏览器facade脚本；仅脚本级动态标记也不能两端消失
+ok 26 - 生命周期仍要求派发浏览器facade脚本；仅脚本级动态标记也不能两端消失
+  ---
+  duration_ms: 0.5864
+  type: 'test'
+  ...
+# Subtest: 标准安装最终生成shim转发真实dispatchDeps，不以备用shim替代生产证据
+ok 27 - 标准安装最终生成shim转发真实dispatchDeps，不以备用shim替代生产证据
+  ---
+  duration_ms: 0.9048
+  type: 'test'
+  ...
+# chat-read-protocol: 真身 scoped-messages.js 交叉验证通过
+# chat-read-protocol: 窗口/Helper 上下文/结算基座断言全部通过
+# Subtest: plugins\\dsh-tavern-sqlite-v2\\test\\chat-read-protocol.test.mjs
+ok 5 - plugins\\dsh-tavern-sqlite-v2\\test\\chat-read-protocol.test.mjs
+  ---
+  duration_ms: 582.9326
+  type: 'test'
+  ...
+# claim-guard: 6 组断言全部通过
+# Subtest: plugins\\dsh-tavern-sqlite-v2\\test\\claim-guard.test.mjs
+ok 6 - plugins\\dsh-tavern-sqlite-v2\\test\\claim-guard.test.mjs
+  ---
+  duration_ms: 510.8062
+  type: 'test'
+  ...
+# [rollback-cleanup] fixture-session: 运行时轮次计数回拨 phase.lastTurn 53 → 52
+# [rollback-cleanup] fixture-background: 运行时轮次计数回拨 phase.lastTurn 1 → 0
+# Subtest: 正常正文的书历史引用在真实Session纯尾回退恢复52并回收独占版本
+ok 30 - 正常正文的书历史引用在真实Session纯尾回退恢复52并回收独占版本
+  ---
+  duration_ms: 349.9579
+  type: 'test'
+  ...
+# [rollback-cleanup] fixture-session: 运行时轮次计数回拨 phase.lastTurn 53 → 52
+# [rollback-cleanup] fixture-background: 运行时轮次计数回拨 phase.lastTurn 1 → 0
+# Subtest: 失败正文的书历史引用在真实Session纯尾回退恢复52并回收独占版本
+ok 31 - 失败正文的书历史引用在真实Session纯尾回退恢复52并回收独占版本
+  ---
+  duration_ms: 306.6884
+  type: 'test'
+  ...
+# [rollback-cleanup] fixture-session: 运行时轮次计数回拨 phase.lastTurn 53 → 52
+# [rollback-cleanup] fixture-background: 运行时轮次计数回拨 phase.lastTurn 1 → 0
+# Subtest: SQL已完成但view失败硬报错，不残留永久写屏障或假成功通知
+ok 32 - SQL已完成但view失败硬报错，不残留永久写屏障或假成功通知
+  ---
+  duration_ms: 249.6459
+  type: 'test'
+  ...
+# [rollback-cleanup] fixture-session: 运行时轮次计数回拨 phase.lastTurn 53 → 52
+# [rollback-cleanup] fixture-background: 运行时轮次计数回拨 phase.lastTurn 1 → 0
+# Subtest: SQL已完成但publish失败硬报错，不残留永久写屏障或假成功通知
+ok 33 - SQL已完成但publish失败硬报错，不残留永久写屏障或假成功通知
+  ---
+  duration_ms: 440.5052
+  type: 'test'
+  ...
+# [rollback-cleanup] fixture-session: 运行时轮次计数回拨 phase.lastTurn 53 → 52
+# [rollback-cleanup] fixture-background: 运行时轮次计数回拨 phase.lastTurn 1 → 0
+# Subtest: 正常53统一删尾，DB正文变量与Agent恢复52，实际turn()重发53
+ok 34 - 正常53统一删尾，DB正文变量与Agent恢复52，实际turn()重发53
+  ---
+  duration_ms: 394.6895
+  type: 'test'
+  ...
+# [rollback-cleanup] fixture-session: 运行时轮次计数回拨 phase.lastTurn 53 → 52
+# [rollback-cleanup] fixture-background: 运行时轮次计数回拨 phase.lastTurn 1 → 0
+# Subtest: 失败53统一删尾，DB正文变量与Agent恢复52，实际turn()重发53
+ok 35 - 失败53统一删尾，DB正文变量与Agent恢复52，实际turn()重发53
+  ---
+  duration_ms: 410.3067
+  type: 'test'
+  ...
+# [rollback-cleanup] fixture-session: 运行时轮次计数回拨 phase.lastTurn 53 → 52
+# [rollback-cleanup] fixture-background: 运行时轮次计数回拨 phase.lastTurn 1 → 0
+# Subtest: 更新前row-v1生成，更新后53统一删尾，DB正文变量与Agent恢复52，实际turn()重发53
+ok 36 - 更新前row-v1生成，更新后53统一删尾，DB正文变量与Agent恢复52，实际turn()重发53
+  ---
+  duration_ms: 477.2581
+  type: 'test'
+  ...
+# [rollback-cleanup] fixture-session: 运行时轮次计数回拨 phase.lastTurn 53 → 52
+# [rollback-cleanup] fixture-background: 运行时轮次计数回拨 phase.lastTurn 1 → 0
+# [rollback-cleanup] fixture-background: 运行时轮次计数回拨 phase.lastTurn 1 → 0
+# Subtest: 旧轮物理回退后后台turn1固定系统头保留，真实任务入口清首轮后SQL与Agent一致
+ok 37 - 旧轮物理回退后后台turn1固定系统头保留，真实任务入口清首轮后SQL与Agent一致
+  ---
+  duration_ms: 578.5341
+  type: 'test'
+  ...
+# Subtest: 删前硬拒：missing-token不能假报干净，archive与Session尾部均不变
+ok 38 - 删前硬拒：missing-token不能假报干净，archive与Session尾部均不变
+  ---
+  duration_ms: 416.9251
+  type: 'test'
+  ...
+# Subtest: 删前硬拒：missing-baseline不能假报干净，archive与Session尾部均不变
+ok 39 - 删前硬拒：missing-baseline不能假报干净，archive与Session尾部均不变
+  ---
+  duration_ms: 420.1933
+  type: 'test'
+  ...
+# Subtest: 删前硬拒：unknown-worker不能假报干净，archive与Session尾部均不变
+ok 40 - 删前硬拒：unknown-worker不能假报干净，archive与Session尾部均不变
+  ---
+  duration_ms: 456.2208
+  type: 'test'
+  ...
+# Subtest: 删前硬拒：missing-sync不能假报干净，archive与Session尾部均不变
+ok 41 - 删前硬拒：missing-sync不能假报干净，archive与Session尾部均不变
+  ---
+  duration_ms: 427.5548
+  type: 'test'
+  ...
+# Subtest: 删前硬拒：missing-inbox不能假报干净，archive与Session尾部均不变
+ok 42 - 删前硬拒：missing-inbox不能假报干净，archive与Session尾部均不变
+  ---
+  duration_ms: 388.4666
+  type: 'test'
+  ...
+# [rollback-cleanup] fixture-session: 运行时轮次计数回拨 phase.lastTurn 53 → 52
+# [rollback-cleanup] fixture-background: 运行时轮次计数回拨 phase.lastTurn 1 → 0
+# Subtest: 资源库五类独立编辑不阻止剧情物理回退，当前值保留而迟到旧任务仍拒
+ok 43 - 资源库五类独立编辑不阻止剧情物理回退，当前值保留而迟到旧任务仍拒
+  ---
+  duration_ms: 735.943
+  type: 'test'
+  ...
+# Subtest: 后台Session持久archive绑定让前台静止屏障覆盖其turn/start
+ok 44 - 后台Session持久archive绑定让前台静止屏障覆盖其turn/start
+  ---
+  duration_ms: 391.3834
+  type: 'test'
+  ...
+# [rollback-cleanup] fixture-session: 运行时轮次计数回拨 phase.lastTurn 53 → 52
+# [rollback-cleanup] fixture-background: 运行时轮次计数回拨 phase.lastTurn 1 → 0
+# Subtest: 最早失败53同时纳入后来54独立worker归属，不遗漏无participant会话
+ok 45 - 最早失败53同时纳入后来54独立worker归属，不遗漏无participant会话
+  ---
+  duration_ms: 438.0215
+  type: 'test'
+  ...
+# Subtest: 前台冷装载与后台stop分别有界，超时不删且迟到清理最终释放
+ok 46 - 前台冷装载与后台stop分别有界，超时不删且迟到清理最终释放
+  ---
+  duration_ms: 605.5625
+  type: 'test'
+  ...
+# [rollback-cleanup] fixture-session: 运行时轮次计数回拨 phase.lastTurn 53 → 52
+# [rollback-cleanup] fixture-background: 运行时轮次计数回拨 phase.lastTurn 1 → 0
+# Subtest: 静止超时不删库，旧run未结算前保持调度屏障并拒绝并发回退
+ok 47 - 静止超时不删库，旧run未结算前保持调度屏障并拒绝并发回退
+  ---
+  duration_ms: 361.9671
+  type: 'test'
+  ...
+# [rollback-cleanup] fixture-session: 运行时轮次计数回拨 phase.lastTurn 53 → 52
+# [rollback-cleanup] fixture-background: 运行时轮次计数回拨 phase.lastTurn 1 → 0
+# [rollback-cleanup] fixture-old-worker: 运行时轮次计数回拨 phase.lastTurn 1 → 0
+# Subtest: 后台participant替换身份有创建记录时新旧两个Session都清理并恢复旧participant
+ok 48 - 后台participant替换身份有创建记录时新旧两个Session都清理并恢复旧participant
+  ---
+  duration_ms: 413.5599
+  type: 'test'
+  ...
+# [rollback-cleanup] fixture-session: 运行时轮次计数回拨 phase.lastTurn 53 → 52
+# [rollback-cleanup] fixture-background: 运行时轮次计数回拨 phase.lastTurn 1 → 0
+# Subtest: 独立后台会话有发任务前seq归属时统一物理删净，无需body引用
+ok 49 - 独立后台会话有发任务前seq归属时统一物理删净，无需body引用
+  ---
+  duration_ms: 345.2247
+  type: 'test'
+  ...
+# [rollback-cleanup] fixture-session: 运行时轮次计数回拨 phase.lastTurn 53 → 52
+# [rollback-cleanup] fixture-background: 运行时轮次计数回拨 phase.lastTurn 1 → 0
+# Subtest: 跨库窗口：prepare-before-native-bit由archive持久意图拦截重开写入
+ok 50 - 跨库窗口：prepare-before-native-bit由archive持久意图拦截重开写入
+  ---
+  duration_ms: 343.6879
+  type: 'test'
+  ...
+# [rollback-cleanup] fixture-session: 运行时轮次计数回拨 phase.lastTurn 53 → 52
+# [rollback-cleanup] fixture-background: 运行时轮次计数回拨 phase.lastTurn 1 → 0
+# Subtest: 跨库窗口：clear-native-before-complete由archive持久意图拦截重开写入
+ok 51 - 跨库窗口：clear-native-before-complete由archive持久意图拦截重开写入
+  ---
+  duration_ms: 361.8883
+  type: 'test'
+  ...
+# [rollback-cleanup] fixture-session: 运行时轮次计数回拨 phase.lastTurn 53 → 52
+# [rollback-cleanup] fixture-background: 运行时轮次计数回拨 phase.lastTurn 1 → 0
+# Subtest: 跨库窗口：after-recall-commit由archive持久意图拦截重开写入
+ok 52 - 跨库窗口：after-recall-commit由archive持久意图拦截重开写入
+  ---
+  duration_ms: 350.0402
+  type: 'test'
+  ...
+# [rollback-cleanup] fixture-session: 运行时轮次计数回拨 phase.lastTurn 53 → 52
+# [rollback-cleanup] fixture-background: 运行时轮次计数回拨 phase.lastTurn 1 → 0
+# Subtest: 跨库故障保留无业务负载的完成意图并拒绝新写，重试立即收敛
+ok 53 - 跨库故障保留无业务负载的完成意图并拒绝新写，重试立即收敛
+  ---
+  duration_ms: 359.7323
+  type: 'test'
+  ...
+# Subtest: Session持久失败位跨重新打开拒绝追加，清除才恢复
+ok 54 - Session持久失败位跨重新打开拒绝追加，清除才恢复
+  ---
+  duration_ms: 89.2003
+  type: 'test'
+  ...
+# Subtest: 旧53隐藏记录不能隐藏复用的新53；只清当前session、消费者可升级且幂等
+not ok 55 - 旧53隐藏记录不能隐藏复用的新53；只清当前session、消费者可升级且幂等
+  ---
+  duration_ms: 9.031
+  type: 'test'
+  location: 'D:\\工作目录\\Leopold\\dsh-tavern\\plugins\\dsh-tavern-sqlite-v2\\test\\client-history-authority.test.mjs:6:1'
+  failureType: 'testCodeFailure'
+  error: '回退状态锚点漂移：if (released) throw new Error("会话读取已取消");'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    once (file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/deploy/rollback-sync-state-transform.mjs:2:53)
+    applyRollbackViewReaderTransform (file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/deploy/rollback-sync-state-transform.mjs:12:6)
+    inlineModule (file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/deploy/rollback-sync-author-transform.mjs:24:31)
+    applyAuthorRollbackSyncTransform (file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/deploy/rollback-sync-author-transform.mjs:61:7)
+    applyClientRollbackTransform (file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/deploy/core-host-transform.mjs:133:47)
+    TestContext.<anonymous> (file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/test/client-history-authority.test.mjs:8:13)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1382:25)
+    Test.start (node:internal/test_runner/test:1242:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17)
+  ...
+# client-manual-fork：React服务桥/主题状态/变量入口取消/确证SQLite隐藏/旧档禁用/claim单次fork/同SID重试与失败拦截/目标缺失显式释放与done对账通过（离线契约，非页面验收）
+# Subtest: plugins\\dsh-tavern-sqlite-v2\\test\\client-manual-fork.test.mjs
+ok 10 - plugins\\dsh-tavern-sqlite-v2\\test\\client-manual-fork.test.mjs
+  ---
+  duration_ms: 559.1351
+  type: 'test'
+  ...
+# file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/deploy/rollback-sync-state-transform.mjs:2
+# function once(s,a,b){if(s.split(a).length!==2)throw Error('回退状态锚点漂移：'+a.slice(0,80));return s.replace(a,b)}
+#                                                     ^
+# Error: 回退状态锚点漂移：if (released) throw new Error("会话读取已取消");
+#     at once (file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/deploy/rollback-sync-state-transform.mjs:2:53)
+#     at applyRollbackViewReaderTransform (file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/deploy/rollback-sync-state-transform.mjs:12:6)
+#     at file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/test/client-rollback-resync-consumer.test.mjs:21:20
+#     at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+#     at async node:internal/modules/esm/loader:643:26
+#     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+# Node.js v24.19.0
+# Subtest: plugins\\dsh-tavern-sqlite-v2\\test\\client-rollback-resync-consumer.test.mjs
+not ok 11 - plugins\\dsh-tavern-sqlite-v2\\test\\client-rollback-resync-consumer.test.mjs
+  ---
+  duration_ms: 197.4118
+  type: 'test'
+  location: 'D:\\工作目录\\Leopold\\dsh-tavern\\plugins\\dsh-tavern-sqlite-v2\\test\\client-rollback-resync-consumer.test.mjs:1:1'
+  failureType: 'testCodeFailure'
+  exitCode: 1
+  signal: ~
+  error: 'test failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: 冷恢复经共享ready补丁而非stock validate，保留required marker及SQL事件不写
+ok 58 - 冷恢复经共享ready补丁而非stock validate，保留required marker及SQL事件不写
+  ---
+  duration_ms: 1.5564
+  type: 'test'
+  ...
+# Subtest: 路由恢复只消除无操作的过时诊断，原状态不改
+ok 59 - 路由恢复只消除无操作的过时诊断，原状态不改
+  ---
+  duration_ms: 1.8177
+  type: 'test'
+  ...
+# Subtest: 失败、部分成功、运行中压缩和其他错误不可被路由恢复隐藏
+ok 60 - 失败、部分成功、运行中压缩和其他错误不可被路由恢复隐藏
+  ---
+  duration_ms: 0.2148
+  type: 'test'
+  ...
+# Subtest: 真实作者完整与缓存消费者同步响应注册变化，不依赖正文新轮或刷新数据库
+not ok 61 - 真实作者完整与缓存消费者同步响应注册变化，不依赖正文新轮或刷新数据库
+  ---
+  duration_ms: 3.2802
+  type: 'test'
+  location: 'D:\\工作目录\\Leopold\\dsh-tavern\\plugins\\dsh-tavern-sqlite-v2\\test\\compaction-warning.test.mjs:29:1'
+  failureType: 'testCodeFailure'
+  error: '压缩警告合并投影丢失作者forkTurnsByMessageId字段'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    applyCompactionWarningTransform (file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/deploy/compaction-warning-transform.mjs:34:41)
+    TestContext.<anonymous> (file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/test/compaction-warning.test.mjs:31:23)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1382:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+    Test.postRun (node:internal/test_runner/test:1522:19)
+    Test.run (node:internal/test_runner/test:1447:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+  ...
+# node:internal/modules/run_main:107
+#     triggerUncaughtException(
+#     ^
+# AssertionError [ERR_ASSERTION]: binding.context ||
+#     at file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/test/core-host-transform.test.mjs:17:11
+#     at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+#     at async node:internal/modules/esm/loader:643:26
+#     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+#   generatedMessage: false,
+#   code: 'ERR_ASSERTION',
+#   actual: false,
+#   expected: true,
+#   operator: '==',
+#   diff: 'simple'
+# }
+# Node.js v24.19.0
+# Subtest: plugins\\dsh-tavern-sqlite-v2\\test\\core-host-transform.test.mjs
+not ok 14 - plugins\\dsh-tavern-sqlite-v2\\test\\core-host-transform.test.mjs
+  ---
+  duration_ms: 559.7305
+  type: 'test'
+  location: 'D:\\工作目录\\Leopold\\dsh-tavern\\plugins\\dsh-tavern-sqlite-v2\\test\\core-host-transform.test.mjs:1:1'
+  failureType: 'testCodeFailure'
+  exitCode: 1
+  signal: ~
+  error: 'test failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# [rollback-cleanup] synthetic-session: 运行时轮次计数回拨 phase.lastTurn 9 → 1
+# Subtest: preflight：两轮会话回退第 2 轮 ⇒ 边界 = 第 1 轮 turn/end，保留 4 条、待删 4 条
+ok 63 - preflight：两轮会话回退第 2 轮 ⇒ 边界 = 第 1 轮 turn/end，保留 4 条、待删 4 条
+  ---
+  duration_ms: 1.3095
+  type: 'test'
+  ...
+# Subtest: preflight：没有更早的 turn/end 且目标轮 turn/start 就是第一条 ⇒ 明确拒绝（不盲返回 -1 当成功）
+ok 64 - preflight：没有更早的 turn/end 且目标轮 turn/start 就是第一条 ⇒ 明确拒绝（不盲返回 -1 当成功）
+  ---
+  duration_ms: 0.3746
+  type: 'test'
+  ...
+# Subtest: preflight：第一轮 + 会话头前缀 ⇒ 保留 turn/start 之前的全部初始事件（禁止删 metadata）
+ok 65 - preflight：第一轮 + 会话头前缀 ⇒ 保留 turn/start 之前的全部初始事件（禁止删 metadata）
+  ---
+  duration_ms: 0.1781
+  type: 'test'
+  ...
+# Subtest: preflight：边界之外没有可截断的事件 ⇒ 拒绝（"无事可做"不是回退成功）
+ok 66 - preflight：边界之外没有可截断的事件 ⇒ 拒绝（"无事可做"不是回退成功）
+  ---
+  duration_ms: 0.1441
+  type: 'test'
+  ...
+# Subtest: preflight：待删段里混入低 seq 事件 ⇒ 拒绝（seq 轴与数组轴不一致 = 非纯尾）
+ok 67 - preflight：待删段里混入低 seq 事件 ⇒ 拒绝（seq 轴与数组轴不一致 = 非纯尾）
+  ---
+  duration_ms: 0.1567
+  type: 'test'
+  ...
+# Subtest: preflight：待删段含 turn < hiddenTurn 的事件 ⇒ 拒绝（禁止中间删除）
+ok 68 - preflight：待删段含 turn < hiddenTurn 的事件 ⇒ 拒绝（禁止中间删除）
+  ---
+  duration_ms: 0.1646
+  type: 'test'
+  ...
+# Subtest: preflight：保留段仍引用被删 seq ⇒ 拒绝（引用链会断）
+ok 69 - preflight：保留段仍引用被删 seq ⇒ 拒绝（引用链会断）
+  ---
+  duration_ms: 0.1723
+  type: 'test'
+  ...
+# Subtest: preflight：保留段内部自洽的引用不报错
+ok 70 - preflight：保留段内部自洽的引用不报错
+  ---
+  duration_ms: 0.1638
+  type: 'test'
+  ...
+# Subtest: preflight：四层接线齐全 ⇒ ok；任一缺失 ⇒ 各自明确拒绝
+ok 71 - preflight：四层接线齐全 ⇒ ok；任一缺失 ⇒ 各自明确拒绝
+  ---
+  duration_ms: 0.4104
+  type: 'test'
+  ...
+# Subtest: preflight：strict=false 只收集 violations（诊断用），不抛也不放行
+ok 72 - preflight：strict=false 只收集 violations（诊断用），不抛也不放行
+  ---
+  duration_ms: 0.644
+  type: 'test'
+  ...
+# Subtest: cleanup strict：先预检、再 drain、再单事务截断、再内存/投影重建（顺序可核）
+ok 73 - cleanup strict：先预检、再 drain、再单事务截断、再内存/投影重建（顺序可核）
+  ---
+  duration_ms: 1.0064
+  type: 'test'
+  ...
+# Subtest: cleanup strict：边界不合法 ⇒ 抛错，且 truncateEvents 一次都没被调用（破坏性写入之前拒绝）
+ok 74 - cleanup strict：边界不合法 ⇒ 抛错，且 truncateEvents 一次都没被调用（破坏性写入之前拒绝）
+  ---
+  duration_ms: 0.9258
+  type: 'test'
+  ...
+# Subtest: cleanup 无strict或显式false也硬拒缺边界，旧warn跳过执行路径已退役
+ok 75 - cleanup 无strict或显式false也硬拒缺边界，旧warn跳过执行路径已退役
+  ---
+  duration_ms: 0.2578
+  type: 'test'
+  ...
+# Subtest: 锚点：fixture 里每个锚点恰好命中一次（空白/文本逐字对齐）
+ok 76 - 锚点：fixture 里每个锚点恰好命中一次（空白/文本逐字对齐）
+  ---
+  duration_ms: 0.7343
+  type: 'test'
+  ...
+# Subtest: transform：空 surface 块被物理截断取代（顺序、幂等、语法）
+ok 77 - transform：空 surface 块被物理截断取代（顺序、幂等、语法）
+  ---
+  duration_ms: 101.5222
+  type: 'test'
+  ...
+# Subtest: transform：多行锚点未知（作者改版）⇒ 抛错，不静默返回原文冒充成功
+ok 78 - transform：多行锚点未知（作者改版）⇒ 抛错，不静默返回原文冒充成功
+  ---
+  duration_ms: 0.7694
+  type: 'test'
+  ...
+# Subtest: transform：签名行未知 / CRLF / 半施 / 他人接线 ⇒ 全部 fail closed
+ok 79 - transform：签名行未知 / CRLF / 半施 / 他人接线 ⇒ 全部 fail closed
+  ---
+  duration_ms: 0.7549
+  type: 'test'
+  ...
+# Subtest: 后台参与者：物理 seq 回退取代作者的「空 surface + 表面补偿」软行（缺口已闭合）
+ok 80 - 后台参与者：物理 seq 回退取代作者的「空 surface + 表面补偿」软行（缺口已闭合）
+  ---
+  duration_ms: 1.1209
+  type: 'test'
+  ...
+# Subtest: 旧文本过渡编排运行时删写前硬拒；只有标准cleanRollback消费者可执行回退
+ok 81 - 旧文本过渡编排运行时删写前硬拒；只有标准cleanRollback消费者可执行回退
+  ---
+  duration_ms: 18.474
+  type: 'test'
+  ...
+# Subtest: 部署旧v1源码：完成提交精确升级且复跑幂等，标记漂移拒绝
+ok 82 - 部署旧v1源码：完成提交精确升级且复跑幂等，标记漂移拒绝
+  ---
+  duration_ms: 123.4056
+  type: 'test'
+  ...
+# Subtest: 对拍（可选）：真实 B2.4 权威源码锚点逐字命中 + 施缝结果同样成立
+ok 83 - 对拍（可选）：真实 B2.4 权威源码锚点逐字命中 + 施缝结果同样成立
+  ---
+  duration_ms: 134.3799
+  type: 'test'
+  ...
+# current-variable-consumers: R1a/c/d同revision兜底/作者null语义/R1b身份基线/R2历史补数/R3保retry/回退state全部通过
+# Subtest: plugins\\dsh-tavern-sqlite-v2\\test\\current-variable-consumers.test.mjs
+ok 17 - plugins\\dsh-tavern-sqlite-v2\\test\\current-variable-consumers.test.mjs
+  ---
+  duration_ms: 574.6078
+  type: 'test'
+  ...
+# esm-module-loader: 无flag明确拒绝原生ESM，不做伪转译
+# Subtest: plugins\\dsh-tavern-sqlite-v2\\test\\esm-module-loader.test.mjs
+ok 18 - plugins\\dsh-tavern-sqlite-v2\\test\\esm-module-loader.test.mjs
+  ---
+  duration_ms: 509.7271
+  type: 'test'
+  ...
+# esm-server-consumer: 缺flag真实消费者明确拒绝通过
+# esm-server-consumer: 实际作者加载期资源快照DI/幂等通过
+# Subtest: plugins\\dsh-tavern-sqlite-v2\\test\\esm-server-consumer.test.mjs
+ok 19 - plugins\\dsh-tavern-sqlite-v2\\test\\esm-server-consumer.test.mjs
+  ---
+  duration_ms: 613.8562
+  type: 'test'
+  ...
+# Subtest: 只去分叉外孤立标记，合法旧失败/重生成保留且输入不改
+ok 87 - 只去分叉外孤立标记，合法旧失败/重生成保留且输入不改
+  ---
+  duration_ms: 2.7957
+  type: 'test'
+  ...
+# Subtest: 最新故事28的替代原生29不能按故事max误删
+ok 88 - 最新故事28的替代原生29不能按故事max误删
+  ---
+  duration_ms: 0.248
+  type: 'test'
+  ...
+# Subtest: 缺边界/缺前缀/畸形轮号/剧情仍依赖未继承映射均零输入写入拒绝
+ok 89 - 缺边界/缺前缀/畸形轮号/剧情仍依赖未继承映射均零输入写入拒绝
+  ---
+  duration_ms: 1.0448
+  type: 'test'
+  ...
+# Subtest: 只允许确切作者turn0种子，未知turn0/负轮/缺轮仍拒绝且不隐藏种子
+ok 90 - 只允许确切作者turn0种子，未知turn0/负轮/缺轮仍拒绝且不隐藏种子
+  ---
+  duration_ms: 2.2258
+  type: 'test'
+  ...
+# Subtest: 无标记普通分叉不造空字段；非连续遗留未来轮全部去除
+ok 91 - 无标记普通分叉不造空字段；非连续遗留未来轮全部去除
+  ---
+  duration_ms: 0.2395
+  type: 'test'
+  ...
+# Subtest: 真实Host锚点转换首次publish之前执行，复跑幂等、漂移零产物拒绝
+ok 92 - 真实Host锚点转换首次publish之前执行，复跑幂等、漂移零产物拒绝
+  ---
+  duration_ms: 0.2946
+  type: 'test'
+  ...
+# Subtest: 写入真实SQLite后全新store冷读，旧合法索引仍在、未来标记没有复活
+ok 93 - 写入真实SQLite后全新store冷读，旧合法索引仍在、未来标记没有复活
+  ---
+  duration_ms: 86.3094
+  type: 'test'
+  ...
+# Subtest: 全新service恢复持久bound同SID且token不出状态；claimed/错SID拒绝不清记录
+ok 94 - 全新service恢复持久bound同SID且token不出状态；claimed/错SID拒绝不清记录
+  ---
+  duration_ms: 109.9686
+  type: 'test'
+  ...
+# Subtest: ① 作者2.5真源存在；两条变换纯源码 apply 成功且幂等（同串复跑不再改）
+ok 95 - ① 作者2.5真源存在；两条变换纯源码 apply 成功且幂等（同串复跑不再改）
+  ---
+  duration_ms: 10.4639
+  type: 'test'
+  ...
+# Subtest: ② host DI：createGenerationTasks 复用作者工厂；raw/generate 都是 descriptor 形态且保留 signal
+ok 96 - ② host DI：createGenerationTasks 复用作者工厂；raw/generate 都是 descriptor 形态且保留 signal
+  ---
+  duration_ms: 5.9359
+  type: 'test'
+  ...
+# Subtest: ③ runtime DI：透传 createGenerationTasks/generate；readGenerationContext 异步 {chat,helperContext}；快照含 presetRegexScripts
+ok 97 - ③ runtime DI：透传 createGenerationTasks/generate；readGenerationContext 异步 {chat,helperContext}；快照含 presetRegexScripts
+  ---
+  duration_ms: 1.5602
+  type: 'test'
+  ...
+# Subtest: ③b 旧代（v1 无生成面）可升级：升级后新面齐全且幂等；升级不是"半标记"
+ok 98 - ③b 旧代（v1 无生成面）可升级：升级后新面齐全且幂等；升级不是"半标记"
+  ---
+  duration_ms: 3.128
+  type: 'test'
+  ...
+# Subtest: ④ VM隔离 raw：descriptor.signal 真传给作者 generateHelperRaw；history 来自当前草稿上下文（role/text）
+ok 99 - ④ VM隔离 raw：descriptor.signal 真传给作者 generateHelperRaw；history 来自当前草稿上下文（role/text）
+  ---
+  duration_ms: 7.3302
+  type: 'test'
+  ...
+# Subtest: ④b VM隔离 generate：预设/当前世界书/扩展/角色变量/正则全部按当前草稿传入作者 generateHelper
+ok 100 - ④b VM隔离 generate：预设/当前世界书/扩展/角色变量/正则全部按当前草稿传入作者 generateHelper
+  ---
+  duration_ms: 6.0009
+  type: 'test'
+  ...
+# Subtest: ④c generate 缺绑定草稿必须响亮失败（不回落持久化最新）
+ok 101 - ④c generate 缺绑定草稿必须响亮失败（不回落持久化最新）
+  ---
+  duration_ms: 5.0976
+  type: 'test'
+  ...
+# Subtest: ① 基线：作者任务层 fixture 存在且与作者源逐字节相同（不是手写赝品）
+ok 102 - ① 基线：作者任务层 fixture 存在且与作者源逐字节相同（不是手写赝品）
+  ---
+  duration_ms: 2.7326
+  type: 'test'
+  ...
+# Subtest: ② kind 路由分离：generate / generateRaw 各取自己的实现；descriptor 带 sessionId+eventId+真 AbortSignal
+ok 103 - ② kind 路由分离：generate / generateRaw 各取自己的实现；descriptor 带 sessionId+eventId+真 AbortSignal
+  ---
+  duration_ms: 1.8062
+  type: 'test'
+  ...
+# Subtest: ③ readGenerationContext：读当前草稿、(binding,config,kind) 三参、模型调用前已读、脚本面看不到 binding
+ok 104 - ③ readGenerationContext：读当前草稿、(binding,config,kind) 三参、模型调用前已读、脚本面看不到 binding
+  ---
+  duration_ms: 0.6398
+  type: 'test'
+  ...
+# Subtest: ④ STARTED 监听器当场取消 ⇒ AbortError、模型从未被调、ENDED 文本为空、计数归零
+ok 105 - ④ STARTED 监听器当场取消 ⇒ AbortError、模型从未被调、ENDED 文本为空、计数归零
+  ---
+  duration_ms: 21.8339
+  type: 'test'
+  ...
+# Subtest: ⑤ AbortSignal 真传：模型挂起不理会 abort 时，stop 仍让作者任务层立刻 AbortError（signal.aborted 变真）
+ok 106 - ⑤ AbortSignal 真传：模型挂起不理会 abort 时，stop 仍让作者任务层立刻 AbortError（signal.aborted 变真）
+  ---
+  duration_ms: 48.9902
+  type: 'test'
+  ...
+# Subtest: ⑥ 编号：重复 id 拒；空 id 自动生成 uuid；重复 id 不进入模型出口
+ok 107 - ⑥ 编号：重复 id 拒；空 id 自动生成 uuid；重复 id 不进入模型出口
+  ---
+  duration_ms: 37.3986
+  type: 'test'
+  ...
+# Subtest: ⑦ 正向流式：双流事件带全文（有序）后 ENDED；非流式只 ENDED；stop id 非法/未命中 false、stopAll 恒 true
+ok 108 - ⑦ 正向流式：双流事件带全文（有序）后 ENDED；非流式只 ENDED；stop id 非法/未命中 false、stopAll 恒 true
+  ---
+  duration_ms: 68.5072
+  type: 'test'
+  ...
+# Subtest: ⑧ dispose：真 abort 在飞 job（模型 new Promise 永不 settle）、随后新生成 fail loud、外部 binding abort 也停
+ok 109 - ⑧ dispose：真 abort 在飞 job（模型 new Promise 永不 settle）、随后新生成 fail loud、外部 binding abort 也停
+  ---
+  duration_ms: 163.6354
+  type: 'test'
+  ...
+# Subtest: ⑨ late ignored：窗口关闭后模型 resolve 不得返回结果（loop 计数回零）；emit 抛错不覆盖结果
+ok 110 - ⑨ late ignored：窗口关闭后模型 resolve 不得返回结果（loop 计数回零）；emit 抛错不覆盖结果
+  ---
+  duration_ms: 82.0812
+  type: 'test'
+  ...
+# Subtest: 必要性：作者raw中确有该函数的真实createTavernHelperMessageReader形态（不是赝品锚点）
+ok 111 - 必要性：作者raw中确有该函数的真实createTavernHelperMessageReader形态（不是赝品锚点）
+  ---
+  duration_ms: 5.8379
+  type: 'test'
+  ...
+# Subtest: 必要性：投影链是作者的 projectTavernHelperMessage（raw 改名：tavernRole/tavernHidden/tavernPluginData）
+ok 112 - 必要性：投影链是作者的 projectTavernHelperMessage（raw 改名：tavernRole/tavernHidden/tavernPluginData）
+  ---
+  duration_ms: 0.8944
+  type: 'test'
+  ...
+# Subtest: 数字/负数/双端range与{{lastMessageId}}：非法range返回[]（不回落当前楼）
+ok 113 - 数字/负数/双端range与{{lastMessageId}}：非法range返回[]（不回落当前楼）
+  ---
+  duration_ms: 9.5688
+  type: 'test'
+  ...
+# Subtest: 越界clamp与reverse normalize：两端各自夹进[0,count-1]，min→max 顺序读出
+ok 114 - 越界clamp与reverse normalize：两端各自夹进[0,count-1]，min→max 顺序读出
+  ---
+  duration_ms: 9.1233
+  type: 'test'
+  ...
+# Subtest: role/hide_state过滤：raw 楼按 tavernRole/tavernHidden 映射后再过滤，与上游一致
+ok 115 - role/hide_state过滤：raw 楼按 tavernRole/tavernHidden 映射后再过滤，与上游一致
+  ---
+  duration_ms: 7.4515
+  type: 'test'
+  ...
+# Subtest: 整行投影逐字段等于上游：role/message_id/swipe_id/message/swipes/swipes_data/variables/data/name/is_hidden/swipes_info/extra
+ok 116 - 整行投影逐字段等于上游：role/message_id/swipe_id/message/swipes/swipes_data/variables/data/name/is_hidden/swipes_info/extra
+  ---
+  duration_ms: 7.1182
+  type: 'test'
+  ...
+# Subtest: swipes_data 保**全部 swipe** 的变量（非 active 不得变 {}）
+ok 117 - swipes_data 保**全部 swipe** 的变量（非 active 不得变 {}）
+  ---
+  duration_ms: 8.2867
+  type: 'test'
+  ...
+# Subtest: swipe_id 按 selectedSwipe clamp（swipes/variables count），越界与缺省都落到合法槽
+ok 118 - swipe_id 按 selectedSwipe clamp（swipes/variables count），越界与缺省都落到合法槽
+  ---
+  duration_ms: 7.9956
+  type: 'test'
+  ...
+# Subtest: raw sourceText||text 契约：正文取 sourceText，缺失时以 swipes 为源
+ok 119 - raw sourceText||text 契约：正文取 sourceText，缺失时以 swipes 为源
+  ---
+  duration_ms: 7.2442
+  type: 'test'
+  ...
+# Subtest: playerName/char 来自 macroState.userName / cardName（不只 state.playerName）
+ok 120 - playerName/char 来自 macroState.userName / cardName（不只 state.playerName）
+  ---
+  duration_ms: 0.3612
+  type: 'test'
+  ...
+# Subtest: 只输出作者契约字段：raw storage 内部字段不得泄漏给卡脚本
+ok 121 - 只输出作者契约字段：raw storage 内部字段不得泄漏给卡脚本
+  ---
+  duration_ms: 6.0489
+  type: 'test'
+  ...
+# Subtest: 泄漏闸门：raw floor 带**额外**内部字段时也不得出现在输出里
+ok 122 - 泄漏闸门：raw floor 带**额外**内部字段时也不得出现在输出里
+  ---
+  duration_ms: 0.6514
+  type: 'test'
+  ...
+# Subtest: raw/投影 message_id 都不作权威：缺 swipe / 外带 message_id=999 一律按**位置**
+ok 123 - raw/投影 message_id 都不作权威：缺 swipe / 外带 message_id=999 一律按**位置**
+  ---
+  duration_ms: 2.0622
+  type: 'test'
+  ...
+# Subtest: resolve message var 走注入 variablesOf({type:message,message_id,swipe_id})：每行一次、只对选中行
+ok 124 - resolve message var 走注入 variablesOf({type:message,message_id,swipe_id})：每行一次、只对选中行
+  ---
+  duration_ms: 1.776
+  type: 'test'
+  ...
+# Subtest: 只读所选行：不 spread 整历史（读 1 行只解析 1 棵树）
+ok 125 - 只读所选行：不 spread 整历史（读 1 行只解析 1 棵树）
+  ---
+  duration_ms: 0.2221
+  type: 'test'
+  ...
+# Subtest: 同步读隔离：返回值改动不污染 raw 行与解析出的树
+ok 126 - 同步读隔离：返回值改动不污染 raw 行与解析出的树
+  ---
+  duration_ms: 6.6083
+  type: 'test'
+  ...
+# Subtest: closed 读抛：readOpen 关闭时本模块不吞异常、不伪空数组
+ok 127 - closed 读抛：readOpen 关闭时本模块不吞异常、不伪空数组
+  ---
+  duration_ms: 0.4589
+  type: 'test'
+  ...
+# Subtest: 空聊天与缺依赖：空数组/明确 TypeError，不静默造假
+ok 128 - 空聊天与缺依赖：空数组/明确 TypeError，不静默造假
+  ---
+  duration_ms: 0.2124
+  type: 'test'
+  ...
+# Subtest: 不自造 last_user/last_char：该语义只存在于上游显示层，不在本读取器
+ok 129 - 不自造 last_user/last_char：该语义只存在于上游显示层，不在本读取器
+  ---
+  duration_ms: 9.0836
+  type: 'test'
+  ...
+# Subtest: 字段来源照实：swipes_info 取 pluginData.swipe_info，extra 缺失为 {}
+ok 130 - 字段来源照实：swipes_info 取 pluginData.swipe_info，extra 缺失为 {}
+  ---
+  duration_ms: 6.8327
+  type: 'test'
+  ...
+# Subtest: ① 基线：固定 5d2 作者源自带 generate/generateRaw DI，且作者编译器真实消费 history/card/worldBook/preset/characterVariables
+ok 131 - ① 基线：固定 5d2 作者源自带 generate/generateRaw DI，且作者编译器真实消费 history/card/worldBook/preset/characterVariables
+  ---
+  duration_ms: 3.6212
+  type: 'test'
+  ...
+# Subtest: ② 接线产物：保留 2.5 签名 + 标记 + 幂等 + 语法有效（node --check 真解析）
+ok 132 - ② 接线产物：保留 2.5 签名 + 标记 + 幂等 + 语法有效（node --check 真解析）
+  ---
+  duration_ms: 113.896
+  type: 'test'
+  ...
+# Subtest: ③ generationContext：history/card/worldBook/preset/全局变量严格当前草稿；chat 参数当场读，不回落持久化
+ok 133 - ③ generationContext：history/card/worldBook/preset/全局变量严格当前草稿；chat 参数当场读，不回落持久化
+  ---
+  duration_ms: 0.6829
+  type: 'test'
+  ...
+# Subtest: ④ 真跑 initializeOpeningRuntime(真 createServerExecution + 真任务层)：卡脚本 generate 在 init 事件内被调且身份正确
+ok 134 - ④ 真跑 initializeOpeningRuntime(真 createServerExecution + 真任务层)：卡脚本 generate 在 init 事件内被调且身份正确
+  ---
+  duration_ms: 56.0363
+  type: 'test'
+  ...
+# Subtest: ④b 未接任务工厂时 generate 是"未接线"占位（不伪成功）：卡脚本调用必须当场报错
+ok 135 - ④b 未接任务工厂时 generate 是"未接线"占位（不伪成功）：卡脚本调用必须当场报错
+  ---
+  duration_ms: 4.2438
+  type: 'test'
+  ...
+# Subtest: ⑤ 接线：初始化只发生在私有草稿发布前；不含早期 session 创建与资源原件写；浏览器不再下发 MVU 脚本
+ok 136 - ⑤ 接线：初始化只发生在私有草稿发布前；不含早期 session 创建与资源原件写；浏览器不再下发 MVU 脚本
+  ---
+  duration_ms: 0.5948
+  type: 'test'
+  ...
+# Subtest: ⑥ 失败：初始化抛错 ⇒ reject 且私有草稿逐字不变、disposeAll 收尾；缺依赖/伪空世界书响亮拒绝
+ok 137 - ⑥ 失败：初始化抛错 ⇒ reject 且私有草稿逐字不变、disposeAll 收尾；缺依赖/伪空世界书响亮拒绝
+  ---
+  duration_ms: 2.2742
+  type: 'test'
+  ...
+# Subtest: ⑦ 真作者任务层 + 真生成 API：kind 路由/descriptor 上下文/真 AbortSignal/dispose 关闭窗口
+ok 138 - ⑦ 真作者任务层 + 真生成 API：kind 路由/descriptor 上下文/真 AbortSignal/dispose 关闭窗口
+  ---
+  duration_ms: 44.0639
+  type: 'test'
+  ...
+# Subtest: ⑧ 真任务层：dispose 真 abort 在飞生成（模型永不 settle）；generationContext 抛错 ⇒ reject 且草稿不变
+ok 139 - ⑧ 真任务层：dispose 真 abort 在飞生成（模型永不 settle）；generationContext 抛错 ⇒ reject 且草稿不变
+  ---
+  duration_ms: 84.5501
+  type: 'test'
+  ...
+# helper-25-readonly: macro作者对照/regex真实installer+engine/version真值/readPipeline逐条对照/本档世界书/预校验拒绝/DOM unsupported/scope关闭/只读面 全部通过
+# Subtest: plugins\\dsh-tavern-sqlite-v2\\test\\helper-25-readonly.test.mjs
+ok 26 - plugins\\dsh-tavern-sqlite-v2\\test\\helper-25-readonly.test.mjs
+  ---
+  duration_ms: 512.1933
+  type: 'test'
+  ...
+# Subtest: ① 真 createServerExecution + 真 CardRuntime eventOn：TavernHelper.tavern_events 派发、getAllVariables 四作用域顺序、deleteVariable 真回执
+ok 141 - ① 真 createServerExecution + 真 CardRuntime eventOn：TavernHelper.tavern_events 派发、getAllVariables 四作用域顺序、deleteVariable 真回执
+  ---
+  duration_ms: 9.6762
+  type: 'test'
+  ...
+# Subtest: ② 数字/负数楼层归一、tavernHidden→hide_state、swipes_data 保非 active swipe、raw 字段不泄漏、content 别名与 content 一致
+ok 142 - ② 数字/负数楼层归一、tavernHidden→hide_state、swipes_data 保非 active swipe、raw 字段不泄漏、content 别名与 content 一致
+  ---
+  duration_ms: 3.5735
+  type: 'test'
+  ...
+# Subtest: ③ generate 与 generateRaw 各走自己的假模型出口；descriptor 带真 AbortSignal；真作者任务层驱动
+ok 143 - ③ generate 与 generateRaw 各走自己的假模型出口；descriptor 带真 AbortSignal；真作者任务层驱动
+  ---
+  duration_ms: 5.7906
+  type: 'test'
+  ...
+# Subtest: ③b 真取消：stopGenerationById 让挂起的假模型走作者任务层 AbortError（微任务闸门手动放行，无 sleep 轮询）
+ok 144 - ③b 真取消：stopGenerationById 让挂起的假模型走作者任务层 AbortError（微任务闸门手动放行，无 sleep 轮询）
+  ---
+  duration_ms: 6.8252
+  type: 'test'
+  ...
+# Subtest: ④ 只读族真接线：macro 纯计算、作者 regex installer/engine 真跑、按钮真 buttonEvent、version 真值
+ok 145 - ④ 只读族真接线：macro 纯计算、作者 regex installer/engine 真跑、按钮真 buttonEvent、version 真值
+  ---
+  duration_ms: 3.4729
+  type: 'test'
+  ...
+# Subtest: ⑤ DISPLAY_APIs（getMessageId/retrieveDisplayedMessage）判 browser-ui；纯计算与 ESM 判服务端
+ok 146 - ⑤ DISPLAY_APIs（getMessageId/retrieveDisplayedMessage）判 browser-ui；纯计算与 ESM 判服务端
+  ---
+  duration_ms: 2.1766
+  type: 'test'
+  ...
+# Subtest: ⑥ TavernHelper.tavern_events/eventTavern/eventTypes 指同一张真事件名表；window 访问器反映同一 sandbox
+ok 147 - ⑥ TavernHelper.tavern_events/eventTavern/eventTypes 指同一张真事件名表；window 访问器反映同一 sandbox
+  ---
+  duration_ms: 3.6299
+  type: 'test'
+  ...
+# Subtest: getAllVariables 按 global→character→script→chat 合并，不遍历聊天消息
+ok 148 - getAllVariables 按 global→character→script→chat 合并，不遍历聊天消息
+  ---
+  duration_ms: 1.5073
+  type: 'test'
+  ...
+# Subtest: getAllVariables 返回隔离拷贝，改返回值不污染宿主真身
+ok 149 - getAllVariables 返回隔离拷贝，改返回值不污染宿主真身
+  ---
+  duration_ms: 0.3062
+  type: 'test'
+  ...
+# Subtest: deleteVariable 返回 {variables, delete_occurred}，删除真的发生时标志为真
+ok 150 - deleteVariable 返回 {variables, delete_occurred}，删除真的发生时标志为真
+  ---
+  duration_ms: 0.9237
+  type: 'test'
+  ...
+# Subtest: deleteVariable 路径不存在时按 lodash 规定返回 true，但变量树不变
+ok 151 - deleteVariable 路径不存在时按 lodash 规定返回 true，但变量树不变
+  ---
+  duration_ms: 0.3638
+  type: 'test'
+  ...
+# Subtest: deleteVariable 走真实 lodash 的数组/深层路径语义，并保 scope 与 CAS
+ok 152 - deleteVariable 走真实 lodash 的数组/深层路径语义，并保 scope 与 CAS
+  ---
+  duration_ms: 0.6391
+  type: 'test'
+  ...
+# Subtest: deleteVariable 不复用全树 JSON 编码：源码该段无 JSON.stringify
+ok 153 - deleteVariable 不复用全树 JSON 编码：源码该段无 JSON.stringify
+  ---
+  duration_ms: 0.5862
+  type: 'test'
+  ...
+# Subtest: 真实结算完成一次patch，内联基准整理无全根diff；完整receipt/状态/时间线同事务落库
+ok 154 - 真实结算完成一次patch，内联基准整理无全根diff；完整receipt/状态/时间线同事务落库
+  ---
+  duration_ms: 110.3678
+  type: 'test'
+  ...
+# Subtest: 结算effect身份、生命周期、swipe、branch或未声明楼失效仍拒绝且不部分提交
+ok 155 - 结算effect身份、生命周期、swipe、branch或未声明楼失效仍拒绝且不部分提交
+  ---
+  duration_ms: 100.4428
+  type: 'test'
+  ...
+# Subtest: 1 patch 新内联世界书 compact 后 root diff = 0；引用落库、1 楼 selected 正确
+ok 156 - 1 patch 新内联世界书 compact 后 root diff = 0；引用落库、1 楼 selected 正确
+  ---
+  duration_ms: 100.9675
+  type: 'test'
+  ...
+# Subtest: 2 K4 非 businessTouched 精确新修剪 {6,7} + append {10,11} → [6,7,10,11]，不是旧 [1..7]
+ok 157 - 2 K4 非 businessTouched 精确新修剪 {6,7} + append {10,11} → [6,7,10,11]，不是旧 [1..7]
+  ---
+  duration_ms: 86.0637
+  type: 'test'
+  ...
+# Subtest: 3 update 同一引用 callback：首次 root diff = 1 保存变化；optionalKey 先 seed 存在再 delete
+ok 158 - 3 update 同一引用 callback：首次 root diff = 1 保存变化；optionalKey 先 seed 存在再 delete
+  ---
+  duration_ms: 83.1479
+  type: 'test'
+  ...
+# Subtest: 4 header-only 不写楼；messages receipt / runtimeInputs 叶子有据；layoutChanged = false
+ok 159 - 4 header-only 不写楼；messages receipt / runtimeInputs 叶子有据；layoutChanged = false
+  ---
+  duration_ms: 100.6088
+  type: 'test'
+  ...
+# Subtest: 5 CAS / 空 changes / assertCurrent / missing parent 失败 = 零写；外借副本隔离
+ok 160 - 5 CAS / 空 changes / assertCurrent / missing parent 失败 = 零写；外借副本隔离
+  ---
+  duration_ms: 72.0839
+  type: 'test'
+  ...
+# Subtest: 6 variableSnapshot trigger 失败：同事务回滚 head+message+book；去源后 retry 可成
+ok 161 - 6 variableSnapshot trigger 失败：同事务回滚 head+message+book；去源后 retry 可成
+  ---
+  duration_ms: 86.5888
+  type: 'test'
+  ...
+# Subtest: 7 纯尾部截断：snapshots >= cut 清零、状态回拨、changed indices 不越界
+ok 162 - 7 纯尾部截断：snapshots >= cut 清零、状态回拨、changed indices 不越界
+  ---
+  duration_ms: 79.973
+  type: 'test'
+  ...
+# legacy-fork-records：claim/bind/created/finish/release CAS、唯一源记录、SID 冻结、老库容忍、损坏不吞、service 接线与释放/恢复/幂等全部通过
+# Subtest: plugins\\dsh-tavern-sqlite-v2\\test\\legacy-fork-records.test.mjs
+ok 31 - plugins\\dsh-tavern-sqlite-v2\\test\\legacy-fork-records.test.mjs
+  ---
+  duration_ms: 1219.8947
+  type: 'test'
+  ...
+# legacy-reader-detachment：journal/block冻结缓存原件零赋值，视图归一化及拒写通过
+# Subtest: plugins\\dsh-tavern-sqlite-v2\\test\\legacy-reader-detachment.test.mjs
+ok 32 - plugins\\dsh-tavern-sqlite-v2\\test\\legacy-reader-detachment.test.mjs
+  ---
+  duration_ms: 443.1743
+  type: 'test'
+  ...
+# legacy-session-reader：绑定缺失零副作用、真实SID选择/旧SID不别名、投影不改原对象、请求参数模拟契约（不证真实主机策略）、header-only观测只构造restore取header、原件字节完整、句柄只读通过（非真Session/UI验收）
+# Subtest: plugins\\dsh-tavern-sqlite-v2\\test\\legacy-session-reader.test.mjs
+ok 33 - plugins\\dsh-tavern-sqlite-v2\\test\\legacy-session-reader.test.mjs
+  ---
+  duration_ms: 623.1555
+  type: 'test'
+  ...
+# legacy-source-workspace：显式源 stat/create/attach、幂等与失败关闭全部通过
+# Subtest: plugins\\dsh-tavern-sqlite-v2\\test\\legacy-source-workspace.test.mjs
+ok 34 - plugins\\dsh-tavern-sqlite-v2\\test\\legacy-source-workspace.test.mjs
+  ---
+  duration_ms: 457.5132
+  type: 'test'
+  ...
+# legacy-view-deploy：锚点/幂等/只查/回滚/语法/卸缝定向断言全部通过
+# Subtest: plugins\\dsh-tavern-sqlite-v2\\test\\legacy-view-deploy.test.mjs
+ok 35 - plugins\\dsh-tavern-sqlite-v2\\test\\legacy-view-deploy.test.mjs
+  ---
+  duration_ms: 1097.5596
+  type: 'test'
+  ...
+# legacy-view-production-anchors：rc.2 真身四模块锚点/幂等/语法全部通过
+# Subtest: plugins\\dsh-tavern-sqlite-v2\\test\\legacy-view-production-anchors.test.mjs
+ok 36 - plugins\\dsh-tavern-sqlite-v2\\test\\legacy-view-production-anchors.test.mjs
+  ---
+  duration_ms: 866.4107
+  type: 'test'
+  ...
+# legacy-view-seams：读取/写闸/观察释放/另存（claim→冻结 SID→建档→标题→收口）与变量/状态在位/显式释放定向断言全部通过
+# Subtest: plugins\\dsh-tavern-sqlite-v2\\test\\legacy-view-seams.test.mjs
+ok 37 - plugins\\dsh-tavern-sqlite-v2\\test\\legacy-view-seams.test.mjs
+  ---
+  duration_ms: 536.0674
+  type: 'test'
+  ...
+# node:internal/modules/run_main:107
+#     triggerUncaughtException(
+#     ^
+# AssertionError [ERR_ASSERTION]: fixture 必须回到 main 施缝前
+#     at file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/test/main-legacy-seams-lifecycle.test.mjs:19:8
+#     at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+#     at async node:internal/modules/esm/loader:643:26
+#     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+#   generatedMessage: false,
+#   code: 'ERR_ASSERTION',
+#   actual: false,
+#   expected: true,
+#   operator: '==',
+#   diff: 'simple'
+# }
+# Node.js v24.19.0
+# Subtest: plugins\\dsh-tavern-sqlite-v2\\test\\main-legacy-seams-lifecycle.test.mjs
+not ok 38 - plugins\\dsh-tavern-sqlite-v2\\test\\main-legacy-seams-lifecycle.test.mjs
+  ---
+  duration_ms: 254.1951
+  type: 'test'
+  location: 'D:\\工作目录\\Leopold\\dsh-tavern\\plugins\\dsh-tavern-sqlite-v2\\test\\main-legacy-seams-lifecycle.test.mjs:1:1'
+  failureType: 'testCodeFailure'
+  exitCode: 1
+  signal: ~
+  error: 'test failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Type mismatch: expected object schema but got undefined at path
+# Type mismatch: expected object schema but got undefined at path
+# Type mismatch: expected object schema but got undefined at path
+# Type mismatch: expected object schema but got undefined at path
+# Type mismatch: expected object schema but got undefined at path
+# Type mismatch: expected object schema but got undefined at path
+# Type mismatch: expected object schema but got undefined at path
+# Type mismatch: expected object schema but got undefined at path
+# Type mismatch: expected object schema but got undefined at path
+# Type mismatch: expected object schema but got undefined at path
+# Subtest: ① 世界书 [initvar] + 开场白覆盖 + 世界书优先重置
+ok 171 - ① 世界书 [initvar] + 开场白覆盖 + 世界书优先重置
+  ---
+  duration_ms: 10.6079
+  type: 'test'
+  ...
+# Subtest: ② schema 正确生成且数据 meta 已清理
+ok 172 - ② schema 正确生成且数据 meta 已清理
+  ---
+  duration_ms: 1.714
+  type: 'test'
+  ...
+# Subtest: ③ 已 initialized_lorebooks 的书不重复初始化
+ok 173 - ③ 已 initialized_lorebooks 的书不重复初始化
+  ---
+  duration_ms: 0.3714
+  type: 'test'
+  ...
+# Subtest: ④ 保留既有运行变量（用户值胜初始值）
+ok 174 - ④ 保留既有运行变量（用户值胜初始值）
+  ---
+  duration_ms: 2.0006
+  type: 'test'
+  ...
+# Subtest: ⑤ substitueMacros 与 executeCommand 回调真实生效
+ok 175 - ⑤ substitueMacros 与 executeCommand 回调真实生效
+  ---
+  duration_ms: 0.827
+  type: 'test'
+  ...
+# Subtest: ⑦ 初始化严格先于 executeCommand（上游 188/191 顺序）且 primaryBook 走显式 input
+ok 176 - ⑦ 初始化严格先于 executeCommand（上游 188/191 顺序）且 primaryBook 走显式 input
+  ---
+  duration_ms: 3.3295
+  type: 'test'
+  ...
+# Subtest: ⑥ 非法输入中止且输入变量保持原值
+ok 177 - ⑥ 非法输入中止且输入变量保持原值
+  ---
+  duration_ms: 2.6748
+  type: 'test'
+  ...
+# 1) dispose：清 timer/interval/RAF/微任务，释放后拒绝
+#   ✓ 加载期 eventOn 注册 + sources 快照
+#   ✓ dispose 清定时器并置 disposed  clearedTimers=3
+#   ✓ dispose 后 timeout/interval/RAF 零回调
+#   ✓ dispose 后 eventOn 拒绝注册
+#   ✓ dispose 后 dispatchEvent 抛 + 留 outcome
+# 1b) dispose 与在飞异步钩子的竞态
+#   ✓ 在飞钩子被 dispose 打断：结果不提交、后续回调全禁  cleared=1
+# 2) dispatchEvent：vm 内执行钩子（同步 timeout）+ strict 不吞错
+#   ✓ 同步死循环被 vm 同步 timeout 打断  130ms
+#   ✓ 非 strict：错误进 outcome 且不抛（旧行为保持）
+#   ✓ strict：钩子错误向上抛
+#   ✓ strict（选项在前）：同步超时也向上抛
+#   ✓ strict：正例不受影响（返回 42、committed=true）
+#   ✓ strict：异步超时也向上抛（不返回 outcome）
+# 3) DOM 探针：加载期按脚本名标记 + 运行期可回读来源 + 自愈标记
+#   ✓ 加载期 DOM 探针标记来源（ui-card.js）
+#   ✓ 运行期 DOM：自愈 no-op + 来源可回读
+#   ✓ DOM 自愈标记可链式返回（typeof=function）
+#   ✓ DOM 标记原语化为空串（+ 拼接安全）
+#   ✓ strict：DOM 探针触发向上抛且可被 isDomProbeError 识别
+#   ✓ strict：两种选项位置都能识别
+# 4) hookBudget：旧签名兼容 + cancel 清定时器
+#   ✓ 旧签名照旧可用（Promise.race 不需要改调用方）
+#   ✓ cancel 立即结束 race 且清定时器（不再留 60s timer）
+#   ✓ 生成在飞 ⇒ 放宽预算有界（等待生成超时）  303ms
+# 5) wrapGenerateRaw：await 之后校验 binding 同一对象且未关闭
+#   ✓ 窗口关闭：旧结果不返回  卡脚本 generateRaw 的调用窗口已在等待期间关闭（结果作废，不提交）
+#   ✓ 窗口被替换：旧请求不借新窗口  卡脚本 generateRaw 的调用窗口已在等待期间被替换（结果作废，不提交）
+#   ✓ binding.closed 兜底判据 + pending 归零
+#   ✓ 正常路径 + 无窗口拒绝（旧判据/文案不变）
+# 6) createCardScriptRuntime：实例自治（旧全局缓存不再是主路径）
+#   ✓ 同 cardPath 两次创建 = 两个独立上下文
+#   ✓ 旧入口兼容且 dispose 自摘缓存
+# 6b) strict：timeout/disposed/DOM/异常 四类失败一律向上抛
+#   ✓ strict：钩子异常抛出（带 kind/event/source/result）
+#   ✓ strict：已释放 ⇒ 抛出（不是 return outcome）
+# 7) 标准链：createCardScriptRuntime + wrapGenerateRaw + 预算放宽
+#   ✓ 标准链跑通：放宽预算让 120ms 生成越过 60ms 默认预算
+#   ✓ 接错计数对象：以可见超时暴露（不静默失效）
+#   ✓ 在飞期间窗口关闭：旧结果不提交（回程校验生效）
+# mvu-runtime-lifecycle: 32 项断言全部通过（退出码 0）
+# Subtest: plugins\\dsh-tavern-sqlite-v2\\test\\mvu-runtime-lifecycle.test.mjs
+ok 40 - plugins\\dsh-tavern-sqlite-v2\\test\\mvu-runtime-lifecycle.test.mjs
+  ---
+  duration_ms: 2584.2974
+  type: 'test'
+  ...
+# file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/lib/server-execution.js:213
+#   const error = new Error(message)
+#                 ^
+# Error: 卡脚本服务端加载失败（通知读取夹具 → 服务端ESM需要Node启动参数 --experimental-vm-modules；当前进程未启用，拒绝转译或绕到宿主执行），本次未执行变量核心、不提交；需修复加载错误或Node启动旗标，不自动迁到浏览器
+#     at fail (file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/lib/server-execution.js:213:17)
+#     at prepareCardHooks (file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/lib/server-execution.js:1016:13)
+#     at async executeMvuUpdate (file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/lib/server-execution.js:1157:21) {
+#   code: 'SERVER_EXECUTION_LOAD_FAILED'
+# }
+# Node.js v24.19.0
+# Subtest: plugins\\dsh-tavern-sqlite-v2\\test\\mvu-zod-notification.test.mjs
+not ok 41 - plugins\\dsh-tavern-sqlite-v2\\test\\mvu-zod-notification.test.mjs
+  ---
+  duration_ms: 411.7136
+  type: 'test'
+  location: 'D:\\工作目录\\Leopold\\dsh-tavern\\plugins\\dsh-tavern-sqlite-v2\\test\\mvu-zod-notification.test.mjs:1:1'
+  failureType: 'testCodeFailure'
+  exitCode: 1
+  signal: ~
+  error: 'test failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# {"result":"PASS","legacyIds":5,"ordinaryIds":3,"promotionLeaseReleased":true,"resolveRejected":true,"directResumesRejected":true,"forkObserveUnchanged":true,"originalFilesUnchanged":true,"descriptorsRestored":true,"remoteDeployment":false}
+# Subtest: plugins\\dsh-tavern-sqlite-v2\\test\\native-readonly-guard.test.mjs
+ok 42 - plugins\\dsh-tavern-sqlite-v2\\test\\native-readonly-guard.test.mjs
+  ---
+  duration_ms: 539.2997
+  type: 'test'
+  ...
+# file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/deploy/opening-runtime-transform.mjs:7
+#   if (source.split(before).length !== 2) throw new Error('开局服务端接线锚点不唯一：' + label)
+#                                                ^
+# Error: 开局服务端接线锚点不唯一：共用动态脚本分类标记
+#     at once (file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/deploy/opening-runtime-transform.mjs:7:48)
+#     at applyOpeningRuntimeTransform (file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/deploy/opening-runtime-transform.mjs:29:10)
+#     at file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/test/opening-seam-sources.test.mjs:7:21
+#     at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+#     at async node:internal/modules/esm/loader:643:26
+#     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+# Node.js v24.19.0
+# Subtest: plugins\\dsh-tavern-sqlite-v2\\test\\opening-seam-sources.test.mjs
+not ok 43 - plugins\\dsh-tavern-sqlite-v2\\test\\opening-seam-sources.test.mjs
+  ---
+  duration_ms: 355.043
+  type: 'test'
+  location: 'D:\\工作目录\\Leopold\\dsh-tavern\\plugins\\dsh-tavern-sqlite-v2\\test\\opening-seam-sources.test.mjs:1:1'
+  failureType: 'testCodeFailure'
+  exitCode: 1
+  signal: ~
+  error: 'test failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# ADDED number 'hp' from '7' to '9' by delta '2' 
+# Reconciling schema with current data state...
+# ADDED number 'hp' from '11' to '13' by delta '2' 
+# Reconciling schema with current data state...
+# Subtest: 开局真实命令、逐swipe事件和短timer全部在发布前完成，重复初始化不重放
+ok 182 - 开局真实命令、逐swipe事件和短timer全部在发布前完成，重复初始化不重放
+  ---
+  duration_ms: 115.6708
+  type: 'test'
+  ...
+# Subtest: 主书开场白覆盖不丢附加和全局initvar，浏览器UI不进服务端
+ok 183 - 主书开场白覆盖不丢附加和全局initvar，浏览器UI不进服务端
+  ---
+  duration_ms: 2.0319
+  type: 'test'
+  ...
+# Subtest: current世界书走真实消费者读口，脚本私有写不改原投影
+ok 184 - current世界书走真实消费者读口，脚本私有写不改原投影
+  ---
+  duration_ms: 9.9672
+  type: 'test'
+  ...
+# Subtest: 第二swipe失败时不发布第一个swipe或scope的半写结果
+ok 185 - 第二swipe失败时不发布第一个swipe或scope的半写结果
+  ---
+  duration_ms: 5.8841
+  type: 'test'
+  ...
+# Subtest: async timer回调拒绝必须原错误上抛，不得把普通timeout当通过
+ok 186 - async timer回调拒绝必须原错误上抛，不得把普通timeout当通过
+  ---
+  duration_ms: 25.0395
+  type: 'test'
+  ...
+# Subtest: 钩子和短timer同步死循环均受真实VM20ms约束
+ok 187 - 钩子和短timer同步死循环均受真实VM20ms约束
+  ---
+  duration_ms: 55.561
+  type: 'test'
+  ...
+# Subtest: 不await的async updater及不同脚本timer await后仍归自己scope
+ok 188 - 不await的async updater及不同脚本timer await后仍归自己scope
+  ---
+  duration_ms: 51.7409
+  type: 'test'
+  ...
+# Subtest: Host调用在飞时取消立即拒绝，whenIdle在dispose后仍join已发调用
+ok 189 - Host调用在飞时取消立即拒绝，whenIdle在dispose后仍join已发调用
+  ---
+  duration_ms: 29.7535
+  type: 'test'
+  ...
+# Subtest: 异步DOM探针即使被脚本catch仍拒提交，标记保原脚本身份
+ok 190 - 异步DOM探针即使被脚本catch仍拒提交，标记保原脚本身份
+  ---
+  duration_ms: 17.6834
+  type: 'test'
+  ...
+# Subtest: ready微任务及短timer保脚本身份，超过256待办即拒绝提交
+ok 191 - ready微任务及短timer保脚本身份，超过256待办即拒绝提交
+  ---
+  duration_ms: 439.6944
+  type: 'test'
+  ...
+# Subtest: scoped冷读：摘要等价、同版本不重复投影、访问才脱离，普通数组仍可克隆
+ok 192 - scoped冷读：摘要等价、同版本不重复投影、访问才脱离，普通数组仍可克隆
+  ---
+  duration_ms: 16.0685
+  type: 'test'
+  ...
+# Subtest: 冷窄读：背景不读消息、场景只读显示列、诊断只取目标载荷、checkpoint只取一楼
+ok 193 - 冷窄读：背景不读消息、场景只读显示列、诊断只取目标载荷、checkpoint只取一楼
+  ---
+  duration_ms: 11.9713
+  type: 'test'
+  ...
+# Subtest: 增量：fields白名单、细粒度头/输入证据、懒脱离及dirty老楼变量不混版本
+ok 194 - 增量：fields白名单、细粒度头/输入证据、懒脱离及dirty老楼变量不混版本
+  ---
+  duration_ms: 34.0746
+  type: 'test'
+  ...
+# Subtest: 布局/输入删除/压缩帧证据与物理删尾：不伪造覆盖、旧scoped仍是旧版本
+ok 195 - 布局/输入删除/压缩帧证据与物理删尾：不伪造覆盖、旧scoped仍是旧版本
+  ---
+  duration_ms: 230.2776
+  type: 'test'
+  ...
+# Subtest: 作者实际view reader＋Helper增量消费者：使用scoped不触发整档克隆，脏楼一处投影
+ok 196 - 作者实际view reader＋Helper增量消费者：使用scoped不触发整档克隆，脏楼一处投影
+  ---
+  duration_ms: 127.5366
+  type: 'test'
+  ...
+# Subtest: 缓存边界与变更保守证据：无缓存/跨连接/删除重建不出借旧结果
+ok 197 - 缓存边界与变更保守证据：无缓存/跨连接/删除重建不出借旧结果
+  ---
+  duration_ms: 354.5501
+  type: 'test'
+  ...
+# Subtest: legacy原件优先、旧foreground完整路径、显式pending null和SQL字段边界
+ok 198 - legacy原件优先、旧foreground完整路径、显式pending null和SQL字段边界
+  ---
+  duration_ms: 229.5659
+  type: 'test'
+  ...
+# public-sync: 后台删尾同步/客户端截断/空身份退役/current资源/路由no-store/UI寿命边界/标准两处挂点 定向通过
+# Subtest: 后台删尾：删前核同连接能力，删后发 child 基线；noop 重试仍同步，能力缺失即拒且不删
+ok 199 - 后台删尾：删前核同连接能力，删后发 child 基线；noop 重试仍同步，能力缺失即拒且不删
+  ---
+  duration_ms: 4.9801
+  type: 'test'
+  ...
+# Subtest: 后台删尾 Host：作者态施缝补同连接接线且幂等，缺删后通知即拒（半标记/漂移）
+ok 200 - 后台删尾 Host：作者态施缝补同连接接线且幂等，缺删后通知即拒（半标记/漂移）
+  ---
+  duration_ms: 3.7353
+  type: 'test'
+  ...
+# Subtest: 客户端截断同步：装到真实 rc.2 客户端的同连接产物上，键含 applyTavernSessionCut 且幂等
+ok 201 - 客户端截断同步：装到真实 rc.2 客户端的同连接产物上，键含 applyTavernSessionCut 且幂等
+  ---
+  duration_ms: 7.0793
+  type: 'test'
+  ...
+# Subtest: 客户端截断同步：接基线后清旧 cell、保 running、不动前台，且不冒充 Chat 回退
+ok 202 - 客户端截断同步：接基线后清旧 cell、保 running、不动前台，且不冒充 Chat 回退
+  ---
+  duration_ms: 3.7843
+  type: 'test'
+  ...
+# Subtest: 空后台退役：只过滤发现可见性，不删行、不永久禁 resume、读失败 fail-visible
+ok 203 - 空后台退役：只过滤发现可见性，不删行、不永久禁 resume、读失败 fail-visible
+  ---
+  duration_ms: 1.8452
+  type: 'test'
+  ...
+# Subtest: 空后台退役 Host：只 4 条初始化 + descriptor 精确 provider，count 变即保；幂等
+ok 204 - 空后台退役 Host：只 4 条初始化 + descriptor 精确 provider，count 变即保；幂等
+  ---
+  duration_ms: 3.989
+  type: 'test'
+  ...
+# Subtest: current 资源：签名 scope 带 current，read 取实际 revision 且不落 cache
+ok 205 - current 资源：签名 scope 带 current，read 取实际 revision 且不落 cache
+  ---
+  duration_ms: 4.9604
+  type: 'test'
+  ...
+# Subtest: current 资源 Host：零正文取头行 + 实际 revision；legacy 分支不动
+ok 206 - current 资源 Host：零正文取头行 + 实际 revision；legacy 分支不动
+  ---
+  duration_ms: 3.2615
+  type: 'test'
+  ...
+# Subtest: current 客户端：放宽 revision、current 不写 token cache、世界书守卫 !access.current
+ok 207 - current 客户端：放宽 revision、current 不写 token cache、世界书守卫 !access.current
+  ---
+  duration_ms: 10.3704
+  type: 'test'
+  ...
+# Subtest: 资源路由：200/403 同带 no-store，403 只给安全原因码
+ok 208 - 资源路由：200/403 同带 no-store，403 只给安全原因码
+  ---
+  duration_ms: 1.2036
+  type: 'test'
+  ...
+# Subtest: 标准预检与 applyAll 后置重算两处都挂退役/current/route；UI 寿命令 V2 只 copy 不套 official loader
+ok 209 - 标准预检与 applyAll 后置重算两处都挂退役/current/route；UI 寿命令 V2 只 copy 不套 official loader
+  ---
+  duration_ms: 2.8341
+  type: 'test'
+  ...
+# Subtest: 全部 public 转换幂等回读：二次施缝逐字节不变，作者 fixture 未被写回
+ok 210 - 全部 public 转换幂等回读：二次施缝逐字节不变，作者 fixture 未被写回
+  ---
+  duration_ms: 5.7504
+  type: 'test'
+  ...
+# Subtest: 实际创建登记回调在descriptor之后，登记失败释放句柄；回拨校准取较早seq
+ok 211 - 实际创建登记回调在descriptor之后，登记失败释放句柄；回拨校准取较早seq
+  ---
+  duration_ms: 18.2039
+  type: 'test'
+  ...
+# Subtest: 实际后台所有任务发模型前保存session独立seq且完整run可等待
+ok 212 - 实际后台所有任务发模型前保存session独立seq且完整run可等待
+  ---
+  duration_ms: 13.0982
+  type: 'test'
+  ...
+# Subtest: 常驻后台state的旧任务输入/召回/工具闭包清除，不丢后续必要task配置
+ok 213 - 常驻后台state的旧任务输入/召回/工具闭包清除，不丢后续必要task配置
+  ---
+  duration_ms: 1.9029
+  type: 'test'
+  ...
+# Subtest: 旧row-v1兼容只接受确切完整布局和行前缀，不降级未知新版基准
+ok 214 - 旧row-v1兼容只接受确切完整布局和行前缀，不降级未知新版基准
+  ---
+  duration_ms: 1.7238
+  type: 'test'
+  ...
+# Subtest: 定向剧情头恢复旧值及缺失语义，未知字段保持当前且无body引用任务删除
+ok 215 - 定向剧情头恢复旧值及缺失语义，未知字段保持当前且无body引用任务删除
+  ---
+  duration_ms: 0.496
+  type: 'test'
+  ...
+# Subtest: Guide与用户配置保留当前增删，旧基准不覆盖；剧情变量和书副本恢复52
+ok 216 - Guide与用户配置保留当前增删，旧基准不覆盖；剧情变量和书副本恢复52
+  ---
+  duration_ms: 0.3691
+  type: 'test'
+  ...
+# Subtest: 实际已施row-v1 timeline与prepare源码精确升级，复跑幂等半标记拒绝
+ok 217 - 实际已施row-v1 timeline与prepare源码精确升级，复跑幂等半标记拒绝
+  ---
+  duration_ms: 10.1211
+  type: 'test'
+  ...
+# Subtest: 实际画像切换与玩家称呼保留当前，资源路径和未知手工控制不复旧，剧情局部宏与副本恢复
+ok 218 - 实际画像切换与玩家称呼保留当前，资源路径和未知手工控制不复旧，剧情局部宏与副本恢复
+  ---
+  duration_ms: 23.8201
+  type: 'test'
+  ...
+# Subtest: 实际卡编辑单SQL不写文件，混合与修订跨存储删前拒绝，定义文件故障不改两副库
+ok 219 - 实际卡编辑单SQL不写文件，混合与修订跨存储删前拒绝，定义文件故障不改两副库
+  ---
+  duration_ms: 219.3176
+  type: 'test'
+  ...
+# Subtest: 实际人物保存及extensions消费者保SQL当前编辑；版本投影与任务身份不变，不写卡文件
+ok 220 - 实际人物保存及extensions消费者保SQL当前编辑；版本投影与任务身份不变，不写卡文件
+  ---
+  duration_ms: 115.9766
+  type: 'test'
+  ...
+# Subtest: 人物变量SQL共享编辑不挂剧情撤销，双连接种子/CAS保留且另一卡独立
+ok 221 - 人物变量SQL共享编辑不挂剧情撤销，双连接种子/CAS保留且另一卡独立
+  ---
+  duration_ms: 103.1566
+  type: 'test'
+  ...
+# Subtest: 扩展设置只存SQL当前值，旧JSON退役、缺基准拒绝、跨连接CAS保留
+ok 222 - 扩展设置只存SQL当前值，旧JSON退役、缺基准拒绝、跨连接CAS保留
+  ---
+  duration_ms: 88.8269
+  type: 'test'
+  ...
+# Subtest: 实际设置写口不挂正文归属，独立SQL编辑保留且不进入剧情撤销
+ok 223 - 实际设置写口不挂正文归属，独立SQL编辑保留且不进入剧情撤销
+  ---
+  duration_ms: 98.8561
+  type: 'test'
+  ...
+# Subtest: 实际adapter清理回调解除旧53正文基线和模板环境缓存，保留他档活动reader
+ok 224 - 实际adapter清理回调解除旧53正文基线和模板环境缓存，保留他档活动reader
+  ---
+  duration_ms: 4.4803
+  type: 'test'
+  ...
+# Subtest: 实际adapter手动写入口整个Promise可join且静止期间新请求拒绝
+ok 225 - 实际adapter手动写入口整个Promise可join且静止期间新请求拒绝
+  ---
+  duration_ms: 2.9635
+  type: 'test'
+  ...
+# Subtest: 旧施缝marker源码升级补完整脚本run等待且第二次幂等
+ok 226 - 旧施缝marker源码升级补完整脚本run等待且第二次幂等
+  ---
+  duration_ms: 7.5669
+  type: 'test'
+  ...
+# Subtest: 实际输入模板消费者运行时使用传入53归属，不重读archive的旧52
+ok 227 - 实际输入模板消费者运行时使用传入53归属，不重读archive的旧52
+  ---
+  duration_ms: 12.4977
+  type: 'test'
+  ...
+# Subtest: 实际共享写保分支身份但Host不挂共享撤销，旧五库挂钩升级清除且幂等
+ok 228 - 实际共享写保分支身份但Host不挂共享撤销，旧五库挂钩升级清除且幂等
+  ---
+  duration_ms: 28.7469
+  type: 'test'
+  ...
+# Subtest: 双连接旧JSON迁入只初始化一次，不覆盖先提交值；非法旧树不删原件
+ok 229 - 双连接旧JSON迁入只初始化一次，不覆盖先提交值；非法旧树不删原件
+  ---
+  duration_ms: 108.7638
+  type: 'test'
+  ...
+# Subtest: 共享变量非JSON或非有限数删写前拒绝，不把undefined静默当删除
+ok 230 - 共享变量非JSON或非有限数删写前拒绝，不把undefined静默当删除
+  ---
+  duration_ms: 56.2149
+  type: 'test'
+  ...
+# Subtest: 静止屏障拒绝共享写身份，特殊键不修改对象原型
+ok 231 - 静止屏障拒绝共享写身份，特殊键不修改对象原型
+  ---
+  duration_ms: 63.0971
+  type: 'test'
+  ...
+# Subtest: 共享手工同键修改不生成逐轮撤销；CAS仍拒过期写，不覆盖无关键
+ok 232 - 共享手工同键修改不生成逐轮撤销；CAS仍拒过期写，不覆盖无关键
+  ---
+  duration_ms: 90.4123
+  type: 'test'
+  ...
+# Subtest: 旧宽边界撤销表退役只删撤销负载，保留当前SQL资源值且双连接重复安全
+ok 233 - 旧宽边界撤销表退役只删撤销负载，保留当前SQL资源值且双连接重复安全
+  ---
+  duration_ms: 99.85
+  type: 'test'
+  ...
+# Subtest: 活动读写句柄回卷并清除旧尾部缓冲，不动其他会话
+ok 234 - 活动读写句柄回卷并清除旧尾部缓冲，不动其他会话
+  ---
+  duration_ms: 1.1016
+  type: 'test'
+  ...
+# Subtest: 缺注册表或不能回卷的句柄必须抛错，不能warn成功
+ok 235 - 缺注册表或不能回卷的句柄必须抛错，不能warn成功
+  ---
+  duration_ms: 0.3515
+  type: 'test'
+  ...
+# Subtest: L4：删除目标轮索引与终态账本，保留更早轮和在途非悬空项
+ok 236 - L4：删除目标轮索引与终态账本，保留更早轮和在途非悬空项
+  ---
+  duration_ms: 1.3413
+  type: 'test'
+  ...
+# [rollback-cleanup] original-main: 运行时轮次计数回拨 phase.lastTurn 38 → 37
+# [rollback-cleanup] original-child: 运行时轮次计数回拨 phase.lastTurn 1 → 0
+# Subtest: 完整回退屏障＋真实写句柄：身份与DELETE同事务，保37/不触发普通追加，重试无重复
+ok 237 - 完整回退屏障＋真实写句柄：身份与DELETE同事务，保37/不触发普通追加，重试无重复
+  ---
+  duration_ms: 351.5989
+  type: 'test'
+  ...
+# Subtest: 冷恢复实际rc.2构造会生成end-seed：专用只读Session去未存后缀、不resume/append，既有意图仍完成
+not ok 238 - 冷恢复实际rc.2构造会生成end-seed：专用只读Session去未存后缀、不resume/append，既有意图仍完成
+  ---
+  duration_ms: 275.7199
+  type: 'test'
+  location: 'D:\\工作目录\\Leopold\\dsh-tavern\\plugins\\dsh-tavern-sqlite-v2\\test\\rollback-identity-barrier.test.mjs:83:1'
+  failureType: 'testCodeFailure'
+  error: '冷会话恢复缺少已就绪的酒馆宿主补丁，拒绝用原生词汇猜测读取'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    Object.loadRollbackSession (eval at <anonymous> (file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/test/rollback-identity-barrier.test.mjs:88:14), <anonymous>:10:94)
+    async f.persistence.loadRollbackSession (file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/test/rollback-identity-barrier.test.mjs:89:78)
+    async acquire (file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/lib/clean-rollback.js:15:13)
+    async file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/lib/clean-rollback.js:47:57
+  ...
+# Subtest: SQL原子身份保存拒绝伪造、普通业务、前台身份；插入故障回滚DELETE
+ok 239 - SQL原子身份保存拒绝伪造、普通业务、前台身份；插入故障回滚DELETE
+  ---
+  duration_ms: 277.1134
+  type: 'test'
+  ...
+# Subtest: 实际半提交视图仍指向53可重试，不把已回退到52当成下一删除目标
+ok 240 - 实际半提交视图仍指向53可重试，不把已回退到52当成下一删除目标
+  ---
+  duration_ms: 1.6141
+  type: 'test'
+  ...
+# Subtest: 取消wait:false仍保留旧run可等待；新start不能覆盖它
+ok 241 - 取消wait:false仍保留旧run可等待；新start不能覆盖它
+  ---
+  duration_ms: 2.3454
+  type: 'test'
+  ...
+# Subtest: 延迟前台任务可等到整体结束，不再追加失败软清
+ok 242 - 延迟前台任务可等到整体结束，不再追加失败软清
+  ---
+  duration_ms: 1.8274
+  type: 'test'
+  ...
+# Subtest: 结算onSettled尚未完成也必须可join，不能在finally开头丢失旧run
+ok 243 - 结算onSettled尚未完成也必须可join，不能在finally开头丢失旧run
+  ---
+  duration_ms: 0.7687
+  type: 'test'
+  ...
+# Subtest: 候选entry被revision移除后仍等待正在进行的完整load
+ok 244 - 候选entry被revision移除后仍等待正在进行的完整load
+  ---
+  duration_ms: 2.6526
+  type: 'test'
+  ...
+# Subtest: 实际Host与所有调度器锚点升级且幂等，回退函数不含旧软清/undo/script写口
+ok 245 - 实际Host与所有调度器锚点升级且幂等，回退函数不含旧软清/undo/script写口
+  ---
+  duration_ms: 6.8787
+  type: 'test'
+  ...
+# 真实宿主源码 projection-baseline-1001 clean-session.js
+# [rollback-cleanup] background-original-fixture: 运行时轮次计数回拨 phase.lastTurn 2 → 1
+# Subtest: 真实Session：物理删尾后请求header/context与surface等于上一轮，重发再回退无幽灵
+ok 246 - 真实Session：物理删尾后请求header/context与surface等于上一轮，重发再回退无幽灵
+  ---
+  duration_ms: 146.6755
+  type: 'test'
+  ...
+# Subtest: 实际后台Host消费者：真实Session及注册表调用真正cleanup，noop与删尾都完成
+ok 247 - 实际后台Host消费者：真实Session及注册表调用真正cleanup，noop与删尾都完成
+  ---
+  duration_ms: 193.102
+  type: 'test'
+  ...
+# Subtest: 跨库失败后调度屏障已释放但持久失败进程位仍禁止新脚本run
+ok 248 - 跨库失败后调度屏障已释放但持久失败进程位仍禁止新脚本run
+  ---
+  duration_ms: 1.4422
+  type: 'test'
+  ...
+# [server-execution] 结算闭合后卡脚本异步写失败（结果作废，未提交）: 卡脚本写窗口已关闭（本次结算已结束），迟到写入已拒绝
+# Subtest: 脚本不await的Host写在runtime结束后仍被whenIdle等待
+not ok 249 - 脚本不await的Host写在runtime结束后仍被whenIdle等待
+  ---
+  duration_ms: 3006.8279
+  type: 'test'
+  location: 'D:\\工作目录\\Leopold\\dsh-tavern\\plugins\\dsh-tavern-sqlite-v2\\test\\rollback-server-run.test.mjs:10:1'
+  failureType: 'testCodeFailure'
+  error: '卡脚本异步完成超出预算，本次不提交'
+  code: 'SERVER_EXECUTION_HOOK_TIMEOUT'
+  stack: |-
+    fail (file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/lib/server-execution.js:213:17)
+    Timeout.wake (file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/lib/server-execution.js:1082:62)
+    listOnTimeout (node:internal/timers:635:17)
+    process.processTimers (node:internal/timers:571:7)
+  ...
+# Subtest: dispose提前移除binding后完整服务端run仍可join，静止期间新run拒绝
+ok 250 - dispose提前移除binding后完整服务端run仍可join，静止期间新run拒绝
+  ---
+  duration_ms: 2.9872
+  type: 'test'
+  ...
+# Subtest: 共享五库不再撤销当前值：换分支后旧53任务拒绝，新分支CAS仍正常
+ok 251 - 共享五库不再撤销当前值：换分支后旧53任务拒绝，新分支CAS仍正常
+  ---
+  duration_ms: 598.4368
+  type: 'test'
+  ...
+# Subtest: 实际turn模板调用前先登记首次新分支，两消费者即使模板失败仍留下body基准
+ok 252 - 实际turn模板调用前先登记首次新分支，两消费者即使模板失败仍留下body基准
+  ---
+  duration_ms: 1.4324
+  type: 'test'
+  ...
+# Subtest: 实际Host五库确切archive解析绑定与两个显式全局写分支身份，标准升级幂等
+ok 253 - 实际Host五库确切archive解析绑定与两个显式全局写分支身份，标准升级幂等
+  ---
+  duration_ms: 24.34
+  type: 'test'
+  ...
+# Subtest: 部署shim导出前台与后台严格回退函数
+ok 254 - 部署shim导出前台与后台严格回退函数
+  ---
+  duration_ms: 0.8091
+  type: 'test'
+  ...
+# Subtest: 后台回退transform引用的shim函数与实际出口同名
+ok 255 - 后台回退transform引用的shim函数与实际出口同名
+  ---
+  duration_ms: 0.5927
+  type: 'test'
+  ...
+# Subtest: 真实作者握手安装到既有sessions：驻留/新Session、control/列表/事件同步且卸载还原
+ok 256 - 真实作者握手安装到既有sessions：驻留/新Session、control/列表/事件同步且卸载还原
+  ---
+  duration_ms: 17.4854
+  type: 'test'
+  ...
+# Subtest: 实码control：低/相同seq、缺键清空、两页/后台、RPC先到/push去重，不动无关状态
+ok 257 - 实码control：低/相同seq、缺键清空、两页/后台、RPC先到/push去重，不动无关状态
+  ---
+  duration_ms: 1.8861
+  type: 'test'
+  ...
+# Subtest: 实码list旧RPC晚到不会复活高水位；无关list状态正常安装
+ok 258 - 实码list旧RPC晚到不会复活高水位；无关list状态正常安装
+  ---
+  duration_ms: 0.596
+  type: 'test'
+  ...
+# Subtest: 实码resync和网关mux：只cancel/open逻辑流、物理close=0，旧follow帧丢弃
+ok 259 - 实码resync和网关mux：只cancel/open逻辑流、物理close=0，旧follow帧丢弃
+  ---
+  duration_ms: 4.136
+  type: 'test'
+  ...
+# Subtest: 真实pending open/连续两次resync串行收敛，不留下旧窗口或重开物理连接
+ok 260 - 真实pending open/连续两次resync串行收敛，不留下旧窗口或重开物理连接
+  ---
+  duration_ms: 1.8201
+  type: 'test'
+  ...
+# Subtest: 真实Session的blank单调relay由回退完整基线重置，不清输入草稿
+ok 261 - 真实Session的blank单调relay由回退完整基线重置，不清输入草稿
+  ---
+  duration_ms: 0.9958
+  type: 'test'
+  ...
+# Subtest: 回退前分页RPC晚到不能prepend已删除的高seq历史
+ok 262 - 回退前分页RPC晚到不能prepend已删除的高seq历史
+  ---
+  duration_ms: 1.016
+  type: 'test'
+  ...
+# Subtest: 同步失败/8秒超时硬拒，通知错误不吞waiter；更晚回退不被早回执回写
+ok 263 - 同步失败/8秒超时硬拒，通知错误不吞waiter；更晚回退不被早回执回写
+  ---
+  duration_ms: 7.1959
+  type: 'test'
+  ...
+# Subtest: 旧后台catalog RPC晚到不复活高代目录，自动再读最新身份和状态
+ok 264 - 旧后台catalog RPC晚到不复活高代目录，自动再读最新身份和状态
+  ---
+  duration_ms: 0.5037
+  type: 'test'
+  ...
+# Subtest: Host生产发布是现有projection帧、完整目标状态、无普通事件持久化并清旧助手流
+ok 265 - Host生产发布是现有projection帧、完整目标状态、无普通事件持久化并清旧助手流
+  ---
+  duration_ms: 102.9671
+  type: 'test'
+  ...
+# Subtest: 完整实际prepare首次分支模板COMMIT失败与同operation重试header CAS保原业务基准
+ok 266 - 完整实际prepare首次分支模板COMMIT失败与同operation重试header CAS保原业务基准
+  ---
+  duration_ms: 297.7079
+  type: 'test'
+  ...
+# Subtest: 完整实际prepare首次分支模板COMMIT失败与同operation重试full write保原业务基准
+ok 267 - 完整实际prepare首次分支模板COMMIT失败与同operation重试full write保原业务基准
+  ---
+  duration_ms: 232.8685
+  type: 'test'
+  ...
+# [rollback-cleanup] fixture-session: 运行时轮次计数回拨 phase.lastTurn 53 → 52
+# Subtest: 完整prepare副写失败discard统一物理回退52再prepare新53，实际rc.2 Session及SQL均无旧53
+ok 268 - 完整prepare副写失败discard统一物理回退52再prepare新53，实际rc.2 Session及SQL均无旧53
+  ---
+  duration_ms: 467.6216
+  type: 'test'
+  ...
+# Subtest: 完整实际失败body直重试必须拒绝，不能以副写53后的当前状态替换52基准
+ok 269 - 完整实际失败body直重试必须拒绝，不能以副写53后的当前状态替换52基准
+  ---
+  duration_ms: 185.1226
+  type: 'test'
+  ...
+# Subtest: 完整recordFailure与discard锁内核身份：无身份及COMMIT前branch切换不写当前头
+ok 270 - 完整recordFailure与discard锁内核身份：无身份及COMMIT前branch切换不写当前头
+  ---
+  duration_ms: 190.0128
+  type: 'test'
+  ...
+# Subtest: 完整finalize锁前换branch与错operation拒旧正文，当前提交仍正常
+ok 271 - 完整finalize锁前换branch与错operation拒旧正文，当前提交仍正常
+  ---
+  duration_ms: 221.9932
+  type: 'test'
+  ...
+# Subtest: 完整失败信号对同branch错operation、completed与pending均无业务写，当前身份仍记录并discard
+ok 272 - 完整失败信号对同branch错operation、completed与pending均无业务写，当前身份仍记录并discard
+  ---
+  duration_ms: 227.9126
+  type: 'test'
+  ...
+# Subtest: 实际延迟handoff绑定不可变旧信号不在defer执行时猜新53身份，Host首await前捕获与cleanup清除
+ok 273 - 实际延迟handoff绑定不可变旧信号不在defer执行时猜新53身份，Host首await前捕获与cleanup清除
+  ---
+  duration_ms: 17.4487
+  type: 'test'
+  ...
+# Subtest: actual completed延迟排队旧53不启动新53结算，当前completed身份可排队且Host finalize透传
+ok 274 - actual completed延迟排队旧53不启动新53结算，当前completed身份可排队且Host finalize透传
+  ---
+  duration_ms: 14.9532
+  type: 'test'
+  ...
+# Subtest: actual settlement-jobs透传完成owner，Host入run读取后再拒跨branch旧队列无副准备
+ok 275 - actual settlement-jobs透传完成owner，Host入run读取后再拒跨branch旧队列无副准备
+  ---
+  duration_ms: 15.1747
+  type: 'test'
+  ...
+# Subtest: 完整实际compatibility首次分支模板失败保正文52与完整前态，重试不改基准
+ok 276 - 完整实际compatibility首次分支模板失败保正文52与完整前态，重试不改基准
+  ---
+  duration_ms: 212.3968
+  type: 'test'
+  ...
+# Subtest: 绑定SQL迁入COMMIT后旧表退役故障retry不解析损坏残留，不覆盖SQL新值
+ok 277 - 绑定SQL迁入COMMIT后旧表退役故障retry不解析损坏残留，不覆盖SQL新值
+  ---
+  duration_ms: 76.6893
+  type: 'test'
+  ...
+# Subtest: 实际FileResource单多绑定SQL权威旧文件退役，独立当前绑定保留且另一卡不覆盖
+ok 278 - 实际FileResource单多绑定SQL权威旧文件退役，独立当前绑定保留且另一卡不覆盖
+  ---
+  duration_ms: 168.2276
+  type: 'test'
+  ...
+# Subtest: 实际资源图改名文件后SQL故障重试保当前卡书绑定，删除去旧路径且无稳定ID层
+ok 279 - 实际资源图改名文件后SQL故障重试保当前卡书绑定，删除去旧路径且无稳定ID层
+  ---
+  duration_ms: 545.1754
+  type: 'test'
+  ...
+# Subtest: 实际FileResource普通复制与新MVU转换当前SQL卡书，已有副本混合写前拒绝且提交后故障可重试
+ok 280 - 实际FileResource普通复制与新MVU转换当前SQL卡书，已有副本混合写前拒绝且提交后故障可重试
+  ---
+  duration_ms: 463.0345
+  type: 'test'
+  ...
+# Subtest: Host当前书ref捕获与所选历史解析同时接线，幂等且残缺拒绝
+ok 281 - Host当前书ref捕获与所选历史解析同时接线，幂等且残缺拒绝
+  ---
+  duration_ms: 1.0194
+  type: 'test'
+  ...
+# Subtest: 真实作者timeline暴露瘦基准capture并接同步历史读取，回退不修改当前书消费者
+ok 282 - 真实作者timeline暴露瘦基准capture并接同步历史读取，回退不修改当前书消费者
+  ---
+  duration_ms: 9.8706
+  type: 'test'
+  ...
+# Subtest: 真实作者lib/index按源码序施完全部前置Host缝后，本档书历史接线两callback与chats读取就位、幂等且残缺拒绝
+not ok 283 - 真实作者lib/index按源码序施完全部前置Host缝后，本档书历史接线两callback与chats读取就位、幂等且残缺拒绝
+  ---
+  duration_ms: 13.2211
+  type: 'test'
+  location: 'D:\\工作目录\\Leopold\\dsh-tavern\\plugins\\dsh-tavern-sqlite-v2\\test\\rollback-worldbook-history-transform.test.mjs:54:1'
+  failureType: 'testCodeFailure'
+  error: '压缩警告合并投影丢失作者forkTurnsByMessageId字段'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    applyCompactionWarningTransform (file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/deploy/compaction-warning-transform.mjs:34:41)
+    TestContext.<anonymous> (file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/test/rollback-worldbook-history-transform.test.mjs:59:29)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1382:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+    Test.postRun (node:internal/test_runner/test:1522:19)
+    Test.run (node:internal/test_runner/test:1447:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+  ...
+# Subtest: 8轮不变书只存1历史版本；普通更新不插入、不写当前书，不展开历史
+ok 284 - 8轮不变书只存1历史版本；普通更新不插入、不写当前书，不展开历史
+  ---
+  duration_ms: 308.8275
+  type: 'test'
+  ...
+# Subtest: 书A到B与重新打开后按基准精确恢复；删除轮只回收无人引用版本
+ok 285 - 书A到B与重新打开后按基准精确恢复；删除轮只回收无人引用版本
+  ---
+  duration_ms: 176.5979
+  type: 'test'
+  ...
+# Subtest: 缺失、整个字段null、document null均精确保存与恢复
+ok 286 - 缺失、整个字段null、document null均精确保存与恢复
+  ---
+  duration_ms: 119.9513
+  type: 'test'
+  ...
+# Subtest: 缺接线、悬空、跨档与过期引用均失败且不修改业务头
+ok 287 - 缺接线、悬空、跨档与过期引用均失败且不修改业务头
+  ---
+  duration_ms: 138.3456
+  type: 'test'
+  ...
+# Subtest: 历史插入及后续头写失败均同事务回滚；悬空写入拒绝保旧态
+ok 288 - 历史插入及后续头写失败均同事务回滚；悬空写入拒绝保旧态
+  ---
+  duration_ms: 202.9866
+  type: 'test'
+  ...
+# Subtest: 新ID新timeline的档只复制当前完整书、不携带旧档引用
+ok 289 - 新ID新timeline的档只复制当前完整书、不携带旧档引用
+  ---
+  duration_ms: 246.9685
+  type: 'test'
+  ...
+# Subtest: 世界书SQL完整前态拒过期entry/null写入，不使用剧情撤销或额外水位行
+ok 290 - 世界书SQL完整前态拒过期entry/null写入，不使用剧情撤销或额外水位行
+  ---
+  duration_ms: 102.1688
+  type: 'test'
+  ...
+# Subtest: SQL明确null区别未初始化，删书后种子不复活，重新新增用当前null基准
+ok 291 - SQL明确null区别未初始化，删书后种子不复活，重新新增用当前null基准
+  ---
+  duration_ms: 96.4714
+  type: 'test'
+  ...
+# Subtest: 外部世界书头字段条目和originalData拆行，独立卡书编辑保留且拒非法文档
+ok 292 - 外部世界书头字段条目和originalData拆行，独立卡书编辑保留且拒非法文档
+  ---
+  duration_ms: 102.4876
+  type: 'test'
+  ...
+# Subtest: 实际worldbook Library读编辑导出/模板与adapter共用SQL归属，更新不写文件
+ok 293 - 实际worldbook Library读编辑导出/模板与adapter共用SQL归属，更新不写文件
+  ---
+  duration_ms: 170.8028
+  type: 'test'
+  ...
+# save-format：原档只读状态、SQLite可玩状态、stamp严格判定、同ID迁移拒绝/零写入、独立分叉文案通过
+# Subtest: plugins\\dsh-tavern-sqlite-v2\\test\\save-format.test.mjs
+ok 73 - plugins\\dsh-tavern-sqlite-v2\\test\\save-format.test.mjs
+  ---
+  duration_ms: 276.8675
+  type: 'test'
+  ...
+# node:internal/modules/run_main:107
+#     triggerUncaughtException(
+#     ^
+# AssertionError [ERR_ASSERTION]: host fixture 必须回到 main 施缝前
+#     at file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/test/save-ui-main-entry.test.mjs:37:8
+#     at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+#     at async node:internal/modules/esm/loader:643:26
+#     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+#   generatedMessage: false,
+#   code: 'ERR_ASSERTION',
+#   actual: false,
+#   expected: true,
+#   operator: '==',
+#   diff: 'simple'
+# }
+# Node.js v24.19.0
+# Subtest: plugins\\dsh-tavern-sqlite-v2\\test\\save-ui-main-entry.test.mjs
+not ok 74 - plugins\\dsh-tavern-sqlite-v2\\test\\save-ui-main-entry.test.mjs
+  ---
+  duration_ms: 142.7854
+  type: 'test'
+  location: 'D:\\工作目录\\Leopold\\dsh-tavern\\plugins\\dsh-tavern-sqlite-v2\\test\\save-ui-main-entry.test.mjs:1:1'
+  failureType: 'testCodeFailure'
+  exitCode: 1
+  signal: ~
+  error: 'test failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: bridge 生命周期（真实插入函数 + VM hooks，不模拟 DOM）
+ok 296 - bridge 生命周期（真实插入函数 + VM hooks，不模拟 DOM）
+  ---
+  duration_ms: 3.3608
+  type: 'test'
+  ...
+# Subtest: transform：无迁移区（更早真身）⇒ 桥落在状态体最前，且不接管作者迁移区
+ok 297 - transform：无迁移区（更早真身）⇒ 桥落在状态体最前，且不接管作者迁移区
+  ---
+  duration_ms: 0.6068
+  type: 'test'
+  ...
+# Subtest: transform：有作者迁移区（当前真身布局）⇒ 桥紧邻迁移区之后、重载人物卡之前
+ok 298 - transform：有作者迁移区（当前真身布局）⇒ 桥紧邻迁移区之后、重载人物卡之前
+  ---
+  duration_ms: 0.4285
+  type: 'test'
+  ...
+# Subtest: transform：幂等（已施缝再跑原样返回）
+ok 299 - transform：幂等（已施缝再跑原样返回）
+  ---
+  duration_ms: 0.1587
+  type: 'test'
+  ...
+# Subtest: fail closed：锚点缺失
+ok 300 - fail closed：锚点缺失
+  ---
+  duration_ms: 0.4481
+  type: 'test'
+  ...
+# Subtest: fail closed：锚点不唯一
+ok 301 - fail closed：锚点不唯一
+  ---
+  duration_ms: 0.1644
+  type: 'test'
+  ...
+# Subtest: fail closed：作者改版（无迁移区且状态体首子节点被挤走）不合规即拒绝
+ok 302 - fail closed：作者改版（无迁移区且状态体首子节点被挤走）不合规即拒绝
+  ---
+  duration_ms: 0.8866
+  type: 'test'
+  ...
+# Subtest: fail closed：迁移区上一行不是背景等待 ⇒ 拒绝（不猜迁移区位置）
+ok 303 - fail closed：迁移区上一行不是背景等待 ⇒ 拒绝（不猜迁移区位置）
+  ---
+  duration_ms: 0.1715
+  type: 'test'
+  ...
+# Subtest: fail closed：迁移区锚点不唯一
+ok 304 - fail closed：迁移区锚点不唯一
+  ---
+  duration_ms: 0.1372
+  type: 'test'
+  ...
+# Subtest: 卸缝护栏：无 manifest 但文件仍含标记 ⇒ 拒绝猜测还原
+ok 305 - 卸缝护栏：无 manifest 但文件仍含标记 ⇒ 拒绝猜测还原
+  ---
+  duration_ms: 22.355
+  type: 'test'
+  ...
+# Subtest: fail closed：已有同名桥但无标记
+ok 306 - fail closed：已有同名桥但无标记
+  ---
+  duration_ms: 0.1891
+  type: 'test'
+  ...
+# Subtest: fail closed：标记在但缺桥调用（完整性）⇒ 拒绝
+ok 307 - fail closed：标记在但缺桥调用（完整性）⇒ 拒绝
+  ---
+  duration_ms: 0.2155
+  type: 'test'
+  ...
+# Subtest: apply：写前解析预验证失败 ⇒ 不写盘
+ok 308 - apply：写前解析预验证失败 ⇒ 不写盘
+  ---
+  duration_ms: 3.2272
+  type: 'test'
+  ...
+# Subtest: apply：写后回读复核失败 ⇒ 两个文件与 manifest/备份整体回滚
+ok 309 - apply：写后回读复核失败 ⇒ 两个文件与 manifest/备份整体回滚
+  ---
+  duration_ms: 8.8203
+  type: 'test'
+  ...
+# Subtest: apply/--check/重复/卸缝：幂等且精确还原
+ok 310 - apply/--check/重复/卸缝：幂等且精确还原
+  ---
+  duration_ms: 21.6021
+  type: 'test'
+  ...
+# Subtest: apply：源码与产物状态不一致（只一个脏）⇒ 响亮拒绝
+ok 311 - apply：源码与产物状态不一致（只一个脏）⇒ 响亮拒绝
+  ---
+  duration_ms: 20.3201
+  type: 'test'
+  ...
+# Subtest: 接缝输出不含写死颜色（主题语义变量/无样式）
+ok 312 - 接缝输出不含写死颜色（主题语义变量/无样式）
+  ---
+  duration_ms: 0.3382
+  type: 'test'
+  ...
+# Subtest: 离线真身（存在才跑）：源码与产物同构、可双向 transform、幂等
+ok 313 - 离线真身（存在才跑）：源码与产物同构、可双向 transform、幂等
+  ---
+  duration_ms: 49.0294
+  type: 'test'
+  ...
+# Subtest: 离线当前真身（存在才跑）：有作者迁移区 ⇒ 桥落在迁移区之后、重载人物卡之前
+ok 314 - 离线当前真身（存在才跑）：有作者迁移区 ⇒ 桥落在迁移区之后、重载人物卡之前
+  ---
+  duration_ms: 28.4972
+  type: 'test'
+  ...
+# server-dispatch-store: 惰性建库/身份/持久化/释放定向断言通过
+# Subtest: plugins\\dsh-tavern-sqlite-v2\\test\\server-dispatch-store.test.mjs
+ok 76 - plugins\\dsh-tavern-sqlite-v2\\test\\server-dispatch-store.test.mjs
+  ---
+  duration_ms: 364.4891
+  type: 'test'
+  ...
+# Subtest: ① ceiling 内的短延迟回调在提交前执行完（真 runtime，非盲等）
+ok 316 - ① ceiling 内的短延迟回调在提交前执行完（真 runtime，非盲等）
+  ---
+  duration_ms: 260.0819
+  type: 'test'
+  ...
+# Subtest: ② 超出 ceiling 的长延迟不被等待（提交不等它，且不 keepalive）
+ok 317 - ② 超出 ceiling 的长延迟不被等待（提交不等它，且不 keepalive）
+  ---
+  duration_ms: 2.5961
+  type: 'test'
+  ...
+# Subtest: ②b 超 ceiling 的长延迟不被接管，且 dispose 后不得再落 Host 写
+ok 318 - ②b 超 ceiling 的长延迟不被接管，且 dispose 后不得再落 Host 写
+  ---
+  duration_ms: 308.4036
+  type: 'test'
+  ...
+# Subtest: ③ 脚本不 await 的 Host 写被完成屏障等到（提交前已落）
+ok 319 - ③ 脚本不 await 的 Host 写被完成屏障等到（提交前已落）
+  ---
+  duration_ms: 2.9316
+  type: 'test'
+  ...
+# Subtest: ④ 短回调里抛错 ⇒ 结算抛错、不返回半成功（不吞错误）
+ok 320 - ④ 短回调里抛错 ⇒ 结算抛错、不返回半成功（不吞错误）
+  ---
+  duration_ms: 34.3598
+  type: 'test'
+  ...
+# Subtest: ⑤ 回调永不结算 ⇒ 有界超预算抛错（不无限等待）
+ok 321 - ⑤ 回调永不结算 ⇒ 有界超预算抛错（不无限等待）
+  ---
+  duration_ms: 313.3322
+  type: 'test'
+  ...
+# Subtest: ⑥ signal 已 abort ⇒ 结算被拒、草稿不回填（等待方不挂死）
+ok 322 - ⑥ signal 已 abort ⇒ 结算被拒、草稿不回填（等待方不挂死）
+  ---
+  duration_ms: 1.3276
+  type: 'test'
+  ...
+# Subtest: ⑦ MESSAGE_RECEIVED 派发一次：回调读到 core 更新后的权威树
+ok 323 - ⑦ MESSAGE_RECEIVED 派发一次：回调读到 core 更新后的权威树
+  ---
+  duration_ms: 3.2742
+  type: 'test'
+  ...
+# Subtest: ⑧ 沙箱内 tavern_events/eventTypes 与 eventTavern 逐值相同，且无假事件
+ok 324 - ⑧ 沙箱内 tavern_events/eventTypes 与 eventTavern 逐值相同，且无假事件
+  ---
+  duration_ms: 1.9388
+  type: 'test'
+  ...
+#   ok - 变换：锚点命中 + 浏览器痕迹清零 + 服务端执行接线就位
+#   ok - 变换：幂等（二次施缝字节不变） + 版本标记唯一
+#   ok - 变换：标记存在但实现不完整 ⇒ 抛错（拒绝猜测修复）
+#   ok - 变换：未知布局 ⇒ 抛错（锚点未命中）
+#   ok - 变换：对 B 2.4 权威源集成 + 变换产物 node --check 通过
+#   ok - 结算：变量核心命令路径（文本 + 基线 → 写回事务草稿）
+#   ok - 结算：基线变量优先于楼层旧树（与浏览器执行器同形）
+#   ok - 结算：无浏览器派发依赖（不注入 scriptDispatch 也能跑，且它永不被调用）
+#   ok - 失败不提交：核心抛错 ⇒ 拒绝且草稿保持原样，卡脚本钩子未派发（runtime 已释放）
+#   ok - 失败不提交：钩子 strict 抛错 ⇒ 拒绝且草稿保持原样，runtime 已释放
+#   ok - 失败不提交：$(ready) 里抛的异步错误不许吞（收尾抛出）
+#   ok - 依赖闸：真实 lodash（mergeWith/unset）可解析 ⇒ 兼容面不静默降级到 unsupported
+#   ok - 兼容面：getVariables / replaceVariables / insertOrAssignVariables 绑定当前事务 eventId
+#   ok - 兼容面：deleteVariable 已是真实异步能力（真实 lodash unset + 当前事务 eventId）
+#   ok - 兼容面：仍未接线的族抛明确信息（不 no-op 伪成功；deleteVariable 已是异步真实能力）
+#   ok - 兼容面：generateRaw 走本包 wrapGenerateRaw（窗口 + 身份 + 当前事务 eventId）
+#   ok - 迟到写拒绝：结算闭合后任何写/读窗口调用都被拒（含 await 期间的替换）
+#   ok - session+operation 隔离：同卡不同会话各自 runtime，互不串写
+#   ok - 同会话同事件重入 ⇒ 结构化拒绝（session+event 唯一）
+#   ok - 异步注册的钩子：有界轮询等到注册（不用固定 sleep）
+#   ok - 依赖闸：readCardExtensions 未接线且卡真有脚本 ⇒ 命令前就响亮失败（不静默跳过钩子）
+#   ok - 依赖闸：卡没有脚本 ⇒ 不需要钩子，正常返回
+#   ok - 分类（自有实现）：不认识即 server-compute；DOM 走浏览器、esm 进服务端 ESM 沙箱；宿主 MVU 核心与已标记脚本被排除
+#   ok - 释放安全：等待钩子注册期间被 disposeSession ⇒ 拒绝（不挂起、不提交）
+#   ok - 生命周期通道：MESSAGE_SENT 走服务端钩子（Host 变更 API 提交，非事务 eventId）
+#   ok - 生命周期通道：可用 options.resolveChat 兜底取聊天（不传 chat 也能派发）
+#   ok - 生命周期通道：变量核心事件不得走本通道；有结算在飞时返回 busy（不并发）
+#   ok - BEFORE_MESSAGE_UPDATE：仅在「有修改且非 user 楼」触发一次，可改写 message_content（不静默丢）
+#   ok - view 投影：storageBrowserScripts 只下发 browser-ui（esm 已归服务端） 与 mvu.serverOwned（前端不初始化浏览器核心）
+#   ok - 模块级便捷入口：同一 host 身份复用实例（busy 互斥可见）+ 生命周期即用即毁
+# [server-execution] 结算闭合后卡脚本异步写失败（结果作废，未提交）: 卡脚本 generateRaw 调用窗口未开启（不在结算或兜底派发期）
+#   FAIL - 兼容面：generateRaw 未接线 ⇒ 明确抛错（不静默空串） 
+#      卡脚本钩子执行失败（mag_variable_update_ended）：generateRaw 尚未接线（缺少 options.generateRaw）
+# [server-execution] 结算闭合后卡脚本异步写失败（结果作废，未提交）: 卡脚本写窗口已关闭（本次结算已结束），迟到写入已拒绝
+#   FAIL - 核心事件桥：命令前建 runtime，STARTED/PARSED/SINGLE/ENDED 全投当前 runtime（不多派 ENDED） 
+#      Expected values to be strictly deep-equal:
+# + actual - expected
+#   [
+#     'mag_variable_update_started',
+#     'mag_command_parsed',
+#     'mag_variable_updated',
+#     'mag_variable_update_ended',
+#     'mag_before_message_update',
+# +   'MESSAGE_RECEIVED'
+#   ]
+#   ok - emitter 契约：无钩子时也传 no-op 函数（绝不传 null 回落全局 emit）
+#   ok - BEFORE_MESSAGE_UPDATE 改写 + preserveForeground ⇒ 显式拒绝（不 overwrite、不静默丢弃）
+#   ok - 生命周期回执带 browserScripts：纯计算卡为 0（调用方据此免下发浏览器）
+#   ok - 生产 bug 修复：钩子读的是权威树（core 改过的），且钩子写不被最终写回覆盖
+#   ok - 权威树写回：宿主替换楼层树对象后，槽位重新指回权威对象（不丢 core 后续写）
+#   ok - disposeAll：终止位拒绝新工作 + 在飞 await 结束后不再提交（迟到提交被堵）
+#   ok - 加载失败必须阻断：非 DOM 的加载错误在变量核心之前抛错（不伪成功、不提交）
+#   ok - DOM 探针加载（脚本其实是界面脚本）⇒ 抛错重试 + 落 browser-ui 标记（不提交成功回执）
+#   ok - 生成上下文 DI：readGenerationContext(binding) 的投影经 wrapGenerateRaw 交给宿主（脚本看不到 binding）
+#   ok - 递归守卫：hook 内写导致的变更不递归派发；操作结束后 isSessionBusy=false
+#   ok - 卡级 DOM 标记：生命周期回执 browserScripts 非 0（不许吞掉已判给浏览器的卡）
+#   ok - 统一投影：store 标记的脚本出现在浏览器侧结果里（两端都不跑的缺口堵死）
+#   ok - 迟到采纳：宿主写 await 期间被 dispose ⇒ 拒绝且不采纳（assertOpen 在 await 之后）
+#   ok - 写目标归一：latest/负数归一到当前楼；别的 swipe 的写不采纳进权威树
+#   ok - 同 operation 令牌：本模块签发才认（伪造/外部参数不是授权）；busy 外部写在写之前被拒
+# 服务端执行 + 核心运行时接缝：45 组通过 / 2 组失败
+# [server-execution] 结算闭合后卡脚本异步写失败（结果作废，未提交）: 卡脚本写窗口已关闭（本次结算已结束），迟到写入已拒绝
+# Subtest: plugins\\dsh-tavern-sqlite-v2\\test\\server-execution.test.mjs
+not ok 78 - plugins\\dsh-tavern-sqlite-v2\\test\\server-execution.test.mjs
+  ---
+  duration_ms: 997.3643
+  type: 'test'
+  location: 'D:\\工作目录\\Leopold\\dsh-tavern\\plugins\\dsh-tavern-sqlite-v2\\test\\server-execution.test.mjs:1:1'
+  failureType: 'testCodeFailure'
+  exitCode: 1
+  signal: ~
+  error: 'test failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: 真实vm脚本加载语法失败必须阻断服务端成功回执
+ok 326 - 真实vm脚本加载语法失败必须阻断服务端成功回执
+  ---
+  duration_ms: 6.6388
+  type: 'test'
+  ...
+# Subtest: 动态DOM标记脚本必须进入实际浏览器过滤结果
+ok 327 - 动态DOM标记脚本必须进入实际浏览器过滤结果
+  ---
+  duration_ms: 0.1857
+  type: 'test'
+  ...
+# Subtest: 卡级DOM标记不能误称浏览器脚本数为零
+ok 328 - 卡级DOM标记不能误称浏览器脚本数为零
+  ---
+  duration_ms: 0.4479
+  type: 'test'
+  ...
+# node:internal/modules/run_main:107
+#     triggerUncaughtException(
+#     ^
+# AssertionError [ERR_ASSERTION]: S1/S2 反向片段命中数必须逐项为 1，拒绝猜测
+# + actual - expected
+#   {
+#     flush: 1,
+#     importLine: 1,
+# +   provide: 0,
+# +   storeBlock: 0
+# -   provide: 1,
+# -   storeBlock: 1
+#   }
+#     at stripHostSeams (file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/test/standard-bare-install.test.mjs:101:10)
+#     at buildBareTree (file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/test/standard-bare-install.test.mjs:112:44)
+#     at file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/test/standard-bare-install.test.mjs:122:13
+#     at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+#     at async node:internal/modules/esm/loader:643:26
+#     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+#   generatedMessage: false,
+#   code: 'ERR_ASSERTION',
+#   actual: { importLine: 1, storeBlock: 0, flush: 1, provide: 0 },
+#   expected: { importLine: 1, storeBlock: 1, flush: 1, provide: 1 },
+#   operator: 'deepStrictEqual',
+#   diff: 'simple'
+# }
+# Node.js v24.19.0
+# Subtest: plugins\\dsh-tavern-sqlite-v2\\test\\standard-bare-install.test.mjs
+not ok 80 - plugins\\dsh-tavern-sqlite-v2\\test\\standard-bare-install.test.mjs
+  ---
+  duration_ms: 234.9386
+  type: 'test'
+  location: 'D:\\工作目录\\Leopold\\dsh-tavern\\plugins\\dsh-tavern-sqlite-v2\\test\\standard-bare-install.test.mjs:1:1'
+  failureType: 'testCodeFailure'
+  exitCode: 1
+  signal: ~
+  error: 'test failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# standard-host 回归闸
+#   ✓ 常量与导出（id/inject/runtime 版本/默认放行名单）
+#   ✓ 原行未禁用 ⇒ 拒绝（不晚 disable 已 import 的树）
+#   ✓ 原行已有 fiber ⇒ 拒绝
+#   ✓ 原行缺失 / name 不符 ⇒ 拒绝
+#   ✓ 作者仅2.5.0；旧2.4与未知版本均在施缝前拒绝
+#   ✓ runtime 门禁：dsh/boot 不符或缺 → 拒绝（含解析明细）
+#   ✓ 拿不到 appDir ⇒ 拒绝；显式 appDir ⇒ 继续
+#   ✓ 快乐路径顺序 + disposer（remove→uninstall，幂等）
+#   ✓ 默认集成点 options 形状（config 引用与缺省）
+#   ✓ owned 唯一：标记才能 adopt；同 URL 无标记 ⇒ 拒绝
+#   ✓ 集成失败：清 row；仅 applied=true 时回滚缝
+#   ✓ 拿不到 owned 行 ⇒ 不伪 ready
+#   ✓ exact 依赖行预检（默认放行 inspect，其余拒绝；不探测 ESM 缓存）
+#   ✓ deriveAppDir（三层 dirname）与 manifest 门禁为纯函数
+#   ✓ resolveAuthorEntry：入口/锚点顺序 + 失败明细（无 cwd 兜底）
+#   ✓ runtime 双候选（node_modules 优先）+ 锚点兜底 + exact 门禁
+#   ✓ apply：disposer + check→(apply)→create→remove→uninstall
+#   ✓ apply 层放行名单 = 默认 ∪ config（追加语义）
+#   ✓ apply：失败 after 施缝 ⇒ 回滚记录（rollback-after-failed-create）
+#   ✓ apply：说谎 stub（施缝后仍 not ready）⇒ 复检拒绝 + 就地回滚缝
+#   ✓ adopt + 缝未就绪 ⇒ 拒绝补施缝
+#   ✓ disposer 安全 shutdown：remove 失败/归属不明 ⇒ 不撤缝
+#   ✓ 无 store 门面（仅 entries/create/remove/resolve）同样可用
+#   ✓ 缝模块缺导出 ⇒ 拒绝
+#   ✓ 源码负断言 + inspect 真身只 import node: 内置（缓存安全）
+# standard-host: 25 组断言全部通过
+# Subtest: plugins\\dsh-tavern-sqlite-v2\\test\\standard-host.test.mjs
+ok 81 - plugins\\dsh-tavern-sqlite-v2\\test\\standard-host.test.mjs
+  ---
+  duration_ms: 358.0328
+  type: 'test'
+  ...
+# file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/deploy/standard-seams.mjs:97
+#     throw new Error('标准接入仅支持已适配作者' + AUTHOR_VERSION + '，拒绝未知版本')
+#           ^
+# Error: 标准接入仅支持已适配作者2.5.0，拒绝未知版本
+#     at requireAuthor (file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/deploy/standard-seams.mjs:97:11)
+#     at checkStandardSeams (file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/deploy/standard-seams.mjs:180:3)
+#     at run (file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/test/standard-seams.test.mjs:127:20)
+#     at file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/test/standard-seams.test.mjs:272:3
+#     at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+#     at async node:internal/modules/esm/loader:643:26
+#     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+# Node.js v24.19.0
+# Subtest: plugins\\dsh-tavern-sqlite-v2\\test\\standard-seams.test.mjs
+not ok 82 - plugins\\dsh-tavern-sqlite-v2\\test\\standard-seams.test.mjs
+  ---
+  duration_ms: 345.8196
+  type: 'test'
+  location: 'D:\\工作目录\\Leopold\\dsh-tavern\\plugins\\dsh-tavern-sqlite-v2\\test\\standard-seams.test.mjs:1:1'
+  failureType: 'testCodeFailure'
+  exitCode: 1
+  signal: ~
+  error: 'test failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# store-legacy-read：原件可读、全部写入口只读、shadow拒写、新ID/fork SQLite可写、原件字节完整保留通过
+# Subtest: plugins\\dsh-tavern-sqlite-v2\\test\\store-legacy-read.test.mjs
+ok 83 - plugins\\dsh-tavern-sqlite-v2\\test\\store-legacy-read.test.mjs
+  ---
+  duration_ms: 787.4542
+  type: 'test'
+  ...
+# store-version: 5 组断言全部通过
+# Subtest: plugins\\dsh-tavern-sqlite-v2\\test\\store-version.test.mjs
+ok 84 - plugins\\dsh-tavern-sqlite-v2\\test\\store-version.test.mjs
+  ---
+  duration_ms: 277.7607
+  type: 'test'
+  ...
+# Subtest: 变量merge、数组替换、插入优先级和返回Promise树与作者contract一致
+ok 334 - 变量merge、数组替换、插入优先级和返回Promise树与作者contract一致
+  ---
+  duration_ms: 7.5614
+  type: 'test'
+  ...
+# Subtest: 默认script id随当前来源切换，getAllVariables同步正确合并且缺scope不伪空
+ok 335 - 默认script id随当前来源切换，getAllVariables同步正确合并且缺scope不伪空
+  ---
+  duration_ms: 0.742
+  type: 'test'
+  ...
+# Subtest: 异步更新等待期间窗口关闭不允许迟到写，宿主stale拒绝
+ok 336 - 异步更新等待期间窗口关闭不允许迟到写，宿主stale拒绝
+  ---
+  duration_ms: 0.4387
+  type: 'test'
+  ...
+# Subtest: Mvu同形别名及真实全局初始化校验：existing/延迟/超时/bootstrap/窗口失效
+ok 337 - Mvu同形别名及真实全局初始化校验：existing/延迟/超时/bootstrap/窗口失效
+  ---
+  duration_ms: 43.7684
+  type: 'test'
+  ...
+# Subtest: 世界书entries解包、先读expectedEntriesCAS、Promise<void>及作者跨存储guard保留
+ok 338 - 世界书entries解包、先读expectedEntriesCAS、Promise<void>及作者跨存储guard保留
+  ---
+  duration_ms: 2.5218
+  type: 'test'
+  ...
+# Subtest: 世界书名称/整书CRUD/regex只有真host注入才forward，缺能力明确unsupported
+ok 339 - 世界书名称/整书CRUD/regex只有真host注入才forward，缺能力明确unsupported
+  ---
+  duration_ms: 0.322
+  type: 'test'
+  ...
+# tavern-regex-api: 作者get/type/scope/过滤/投影/replace/update/CAS/人物不变/窗口关闭/缺快照/unsupported定向断言全部通过
+# Subtest: plugins\\dsh-tavern-sqlite-v2\\test\\tavern-regex-api.test.mjs
+ok 86 - plugins\\dsh-tavern-sqlite-v2\\test\\tavern-regex-api.test.mjs
+  ---
+  duration_ms: 248.5724
+  type: 'test'
+  ...
+# Subtest: 回退入口不再读取历史revision；未知源码拒绝施缝
+ok 341 - 回退入口不再读取历史revision；未知源码拒绝施缝
+  ---
+  duration_ms: 1.0766
+  type: 'test'
+  ...
+# Subtest: 作者真实时间线：捕获业务头，正文只用当前行前缀，旧checkpoint拒绝伪造
+ok 342 - 作者真实时间线：捕获业务头，正文只用当前行前缀，旧checkpoint拒绝伪造
+  ---
+  duration_ms: 4.6668
+  type: 'test'
+  ...
+# Subtest: 实际错误弹窗：HTTP环境DOM复制成功才提示，不盲报已复制
+ok 343 - 实际错误弹窗：HTTP环境DOM复制成功才提示，不盲报已复制
+  ---
+  duration_ms: 10.6501
+  type: 'test'
+  ...
+# Subtest: 未注册网关明确解释动态路由，不误导用户开发专用适配器
+ok 344 - 未注册网关明确解释动态路由，不误导用户开发专用适配器
+  ---
+  duration_ms: 0.9487
+  type: 'test'
+  ...
+# unmigrated-guard: 6 组断言全部通过（未迁移档开始轮次被拦 / 已迁移放行 / 非酒馆会话不拦）
+# Subtest: plugins\\dsh-tavern-sqlite-v2\\test\\unmigrated-guard.test.mjs
+ok 88 - plugins\\dsh-tavern-sqlite-v2\\test\\unmigrated-guard.test.mjs
+  ---
+  duration_ms: 295.0232
+  type: 'test'
+  ...
+# Subtest: source与built内联模块同源：三个状态模块文本一致，且分头施缝后行为对等
+ok 346 - source与built内联模块同源：三个状态模块文本一致，且分头施缝后行为对等
+  ---
+  duration_ms: 11.5572
+  type: 'test'
+  ...
+# Subtest: reader回退：旧accept被世代拒、新accept成功、在飞请求归还后不泄漏pending
+ok 347 - reader回退：旧accept被世代拒、新accept成功、在飞请求归还后不泄漏pending
+  ---
+  duration_ms: 3.4774
+  type: 'test'
+  ...
+# Subtest: live回退：abort旧load、旧view不install、新读publish，且setView之后仍能继续refresh
+ok 348 - live回退：abort旧load、旧view不install、新读publish，且setView之后仍能继续refresh
+  ---
+  duration_ms: 5.2819
+  type: 'test'
+  ...
+# Subtest: 协调器回退：旧RPC迟到不发布，SSE快照只唤醒权威HTTP读、不安装旧快照
+ok 349 - 协调器回退：旧RPC迟到不发布，SSE快照只唤醒权威HTTP读、不安装旧快照
+  ---
+  duration_ms: 7.0784
+  type: 'test'
+  ...
+# Subtest: 回退callback锚点：在2.5作者源上施加后等待push、且不残留旧view安装路径
+ok 350 - 回退callback锚点：在2.5作者源上施加后等待push、且不残留旧view安装路径
+  ---
+  duration_ms: 1.7336
+  type: 'test'
+  ...
+# Subtest: 固定作者2.5 raw确为带generate DI与多行fork投影的形态，不作假锚点
+ok 351 - 固定作者2.5 raw确为带generate DI与多行fork投影的形态，不作假锚点
+  ---
+  duration_ms: 4.0685
+  type: 'test'
+  ...
+# Subtest: opening：新签名下只加标记并原样传递作者generate/generateRaw，吞参数即拒
+ok 352 - opening：新签名下只加标记并原样传递作者generate/generateRaw，吞参数即拒
+  ---
+  duration_ms: 1.8329
+  type: 'test'
+  ...
+# Subtest: opening：作者generate/generateRaw真被透传到初始化调用，且generationContext按当前草稿当场构造
+ok 353 - opening：作者generate/generateRaw真被透传到初始化调用，且generationContext按当前草稿当场构造
+  ---
+  duration_ms: 1.3628
+  type: 'test'
+  ...
+# Subtest: compaction：2.5多行volatile合并投影，保留作者fork新字段并追加我们的警告字段
+ok 354 - compaction：2.5多行volatile合并投影，保留作者fork新字段并追加我们的警告字段
+  ---
+  duration_ms: 4.4502
+  type: 'test'
+  ...
+# Subtest: 新代已删除saveMvuCard完整通过转换，不注入obsolete API与expectedTargetText
+ok 355 - 新代已删除saveMvuCard完整通过转换，不注入obsolete API与expectedTargetText
+  ---
+  duration_ms: 5.9376
+  type: 'test'
+  ...
+# Subtest: 两代真实public源码转换均一次成功且幂等
+ok 356 - 两代真实public源码转换均一次成功且幂等
+  ---
+  duration_ms: 4.1218
+  type: 'test'
+  ...
+# Subtest: 旧代saveMvuCard在则保强guard：原子写比较、去变量/书快照语义、两处绑定与种子插入
+ok 357 - 旧代saveMvuCard在则保强guard：原子写比较、去变量/书快照语义、两处绑定与种子插入
+  ---
+  duration_ms: 2.0883
+  type: 'test'
+  ...
+# Subtest: 半缺形态漂移：旧入口在但任一MVU锚点数量不为1必须拒绝
+ok 358 - 半缺形态漂移：旧入口在但任一MVU锚点数量不为1必须拒绝
+  ---
+  duration_ms: 3.4831
+  type: 'test'
+  ...
+# Subtest: 入口已删但残留MVU专用锚点（形态漂移）必须拒绝，不造通用fallback
+ok 359 - 入口已删但残留MVU专用锚点（形态漂移）必须拒绝，不造通用fallback
+  ---
+  duration_ms: 1.6581
+  type: 'test'
+  ...
+# Subtest: common binding锚点缺失必须响亮失败，不静默产出半成品
+ok 360 - common binding锚点缺失必须响亮失败，不静默产出半成品
+  ---
+  duration_ms: 1.2009
+  type: 'test'
+  ...
+# ① 身份门通过：tarball 顶层 dsh-tavern-5d2ffacf4231c9f45dc641b9db9e0286c4fa5f60 / 2.5.0 / 受管 targets 42/56（apply 待创建 11 个垫片位）
+# ② apply 通过：changed/ready/记录 2.5.0/前像逐字/后像哈希一致
+# ③④ check/reapply 通过：ready + pending 空 + 幂等
+# ⑤ 写前拒通过：unknown 版本 / 漂移 均拒绝且不改字节（records 与靶文件原样）
+# ⑥ rehearseSource(install) 通过：裸副本预演 ready（输入裸树字节未动）
+# ⑦ rehearseSource(uninstall) 通过：已施缝树预演卸净；裸树卸载预演响亮拒绝
+# D:\\DSH\\temp\\tavern-25-broken-N0EOXE\\app\\tavern-plugin\\lib\\index.js:4207
+# SyntaxError: Unexpected end of input
+#     at checkSyntax (node:internal/main/check_syntax:72:5)
+# Node.js v24.19.0
+# ⑧ 失败回滚通过：语法错误拒绝 + 不落记录 + 本次写入已撤
+# ⑨ uninstall 通过：原字节逐字恢复 + 记录清零 + 受管无残留 + 语法有效
+# upstream-25-standard-consumer: 2.5 固定源码 consumer 断言全部通过
+# upstream-25-standard-consumer: 边界 —— 只证明源码合同（apply/check/reapply/记录/install+uninstall 预演/失败回滚/卸载原字节）；不证明页面/运行时/真实档，也不证明解压子树 === 作者 GitHub 全根工程
+# Subtest: plugins\\dsh-tavern-sqlite-v2\\test\\upstream-25-standard-consumer.test.mjs
+ok 92 - plugins\\dsh-tavern-sqlite-v2\\test\\upstream-25-standard-consumer.test.mjs
+  ---
+  duration_ms: 20160.8333
+  type: 'test'
+  ...
+# upstream-event-contract: 事件常量/真实core单变量事件/变换signal+幂等+浏览器痕迹清零 定向通过
+# Subtest: 依赖闸：真实 lodash 可解析 ⇒ 单变量事件路径不是降级替身
+ok 362 - 依赖闸：真实 lodash 可解析 ⇒ 单变量事件路径不是降级替身
+  ---
+  duration_ms: 0.8665
+  type: 'test'
+  ...
+# Subtest: 事件常量：core 与 server-execution 同名同值（两处常量表不得互不一致）
+ok 363 - 事件常量：core 与 server-execution 同名同值（两处常量表不得互不一致）
+  ---
+  duration_ms: 0.2186
+  type: 'test'
+  ...
+# Subtest: 事件常量逐值等于 pinned 上游 variable_def.ts（含 deprecated 单变量事件）
+ok 364 - 事件常量逐值等于 pinned 上游 variable_def.ts（含 deprecated 单变量事件）
+  ---
+  duration_ms: 0.9042
+  type: 'test'
+  ...
+# Subtest: 真实 core：_.set 触发单变量事件恰好一次，监听用服务端事件值即可收到
+ok 365 - 真实 core：_.set 触发单变量事件恰好一次，监听用服务端事件值即可收到
+  ---
+  duration_ms: 3.9637
+  type: 'test'
+  ...
+# Subtest: 真实 core：_.add 触发单变量事件恰好一次，出值正确
+ok 366 - 真实 core：_.add 触发单变量事件恰好一次，出值正确
+  ---
+  duration_ms: 1.4206
+  type: 'test'
+  ...
+# Subtest: 真实 core：两条命令各自触发一次（不是合并成一次）
+ok 367 - 真实 core：两条命令各自触发一次（不是合并成一次）
+  ---
+  duration_ms: 0.8827
+  type: 'test'
+  ...
+# Subtest: 真实 core：监听名错值（旧 mag_single_variable_updated）零命中 ⇒ 该名确为断链缺陷名
+ok 368 - 真实 core：监听名错值（旧 mag_single_variable_updated）零命中 ⇒ 该名确为断链缺陷名
+  ---
+  duration_ms: 0.4542
+  type: 'test'
+  ...
+# Subtest: 真实 core：派发名 = 服务端/上游值，且监听器在跑完后不残留
+ok 369 - 真实 core：派发名 = 服务端/上游值，且监听器在跑完后不残留
+  ---
+  duration_ms: 0.4888
+  type: 'test'
+  ...
+# Subtest: 变换：从纯作者 fixture 施缝 ⇒ 两次字节幂等 + 浏览器派发核心痕迹清零
+ok 370 - 变换：从纯作者 fixture 施缝 ⇒ 两次字节幂等 + 浏览器派发核心痕迹清零
+  ---
+  duration_ms: 4.0942
+  type: 'test'
+  ...
+# Subtest: 变换：新施缝结果传取消 signal（新旧两代升级都要有）
+ok 371 - 变换：新施缝结果传取消 signal（新旧两代升级都要有）
+  ---
+  duration_ms: 2.0297
+  type: 'test'
+  ...
+# Subtest: 变换：旧代产物（缺 signal）升级 ⇒ 补上 signal，且升级后幂等
+ok 372 - 变换：旧代产物（缺 signal）升级 ⇒ 补上 signal，且升级后幂等
+  ---
+  duration_ms: 2.3887
+  type: 'test'
+  ...
+# Subtest: 变换：旧代同时缺 signal + 资源快照 ⇒ 一并补齐（升级分支不漏项）
+not ok 373 - 变换：旧代同时缺 signal + 资源快照 ⇒ 一并补齐（升级分支不漏项）
+  ---
+  duration_ms: 1.959
+  type: 'test'
+  location: 'D:\\工作目录\\Leopold\\dsh-tavern\\plugins\\dsh-tavern-sqlite-v2\\test\\upstream-event-contract.test.mjs:210:1'
+  failureType: 'testCodeFailure'
+  error: '核心运行时接缝标记存在但实现不完整（缺少 presetRegexScripts: chat.runtimePresetSnapshot?.regexScripts || []），拒绝猜测修复'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    runtimeTransformApplied (file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/deploy/core-runtime-transform.mjs:419:43)
+    Module.applyRuntimeTransform (file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/deploy/core-runtime-transform.mjs:433:7)
+    TestContext.<anonymous> (file:///D:/%E5%B7%A5%E4%BD%9C%E7%9B%AE%E5%BD%95/Leopold/dsh-tavern/plugins/dsh-tavern-sqlite-v2/test/upstream-event-contract.test.mjs:215:30)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1382:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+    Test.postRun (node:internal/test_runner/test:1522:19)
+    Test.run (node:internal/test_runner/test:1447:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+  ...
+# Subtest: 变换只读：作者 fixture 未被本文件改写（真 app/source-fixture 保持原样）
+ok 374 - 变换只读：作者 fixture 未被本文件改写（真 app/source-fixture 保持原样）
+  ---
+  duration_ms: 0.496
+  type: 'test'
+  ...
+# variable-archive: ①②③④⑤⑥⑦⑧⑨⑩⑪ 全部断言通过
+# Subtest: plugins\\dsh-tavern-sqlite-v2\\test\\variable-archive.test.mjs
+ok 94 - plugins\\dsh-tavern-sqlite-v2\\test\\variable-archive.test.mjs
+  ---
+  duration_ms: 857.1256
+  type: 'test'
+  ...
+# variable-query-sqlite-compat: 冷库/K4/选中swipe/前台工具execute/分页搜索/尾删后查询全部通过
+# history-recall-sqlite-compat: 冻结B真检索件读取SQLite/删除正文不重现/冷却持久化/变量不变通过
+# Subtest: plugins\\dsh-tavern-sqlite-v2\\test\\variable-query-sqlite-compat.test.mjs
+ok 95 - plugins\\dsh-tavern-sqlite-v2\\test\\variable-query-sqlite-compat.test.mjs
+  ---
+  duration_ms: 249.9121
+  type: 'test'
+  ...
+# variable-snapshot-cache: ①②③④⑤⑥⑦ 全部断言通过
+# Subtest: plugins\\dsh-tavern-sqlite-v2\\test\\variable-snapshot-cache.test.mjs
+ok 96 - plugins\\dsh-tavern-sqlite-v2\\test\\variable-snapshot-cache.test.mjs
+  ---
+  duration_ms: 6250.2571
+  type: 'test'
+  ...
+#   ok - 未初始化档 has/snapshot/snapshotAt 为空
+#   ok - commitSettlement 写快照+state，可查可回放
+#   ok - 同轮重复结算幂等覆盖（uid 更新）
+#   ok - updateState 只动 state 不加快照
+#   ok - 回退物理删除：state 回拨到幸存快照
+#   ok - 回退到头：快照链清空则 state 清空（回到未初始化）
+#   ok - importSnapshots 迁移导入并置 state
+#   ok - drop 删除库文件与句柄
+#   ok - 回退后重新结算继续快照链
+#   ok - 非法 chatId 拒绝
+#     500 轮提交 2566ms（5.13ms/轮），读 0ms
+#     回退删除 5ms
+#   ok - 大批量导入性能冒烟（500 轮 × 20KB 树）
+#   ok - snapshotAll 批量读取 + 缓存 + 写时失效
+# ALL 12 PASSED
+# Subtest: plugins\\dsh-tavern-sqlite-v2\\test\\variable-store.test.mjs
+ok 97 - plugins\\dsh-tavern-sqlite-v2\\test\\variable-store.test.mjs
+  ---
+  duration_ms: 2998.7302
+  type: 'test'
+  ...
+# Subtest: case1 最新按 created_at 而非最大 turn；同 created_at 由 operation_id 降序夺标
+ok 379 - case1 最新按 created_at 而非最大 turn；同 created_at 由 operation_id 降序夺标
+  ---
+  duration_ms: 149.4791
+  type: 'test'
+  ...
+# Subtest: case2 指定早期 turn 仍取该轮；第200轮日志里保留的第15轮承诺内容完整不被截断
+ok 380 - case2 指定早期 turn 仍取该轮；第200轮日志里保留的第15轮承诺内容完整不被截断
+  ---
+  duration_ms: 70.1848
+  type: 'test'
+  ...
+# Subtest: case3 有 branch 只认本分支；无 branch 跨分支取最新；不同 chat 相互隔离
+ok 381 - case3 有 branch 只认本分支；无 branch 跨分支取最新；不同 chat 相互隔离
+  ---
+  duration_ms: 73.7301
+  type: 'test'
+  ...
+# Subtest: case4 availableTurns 按升序首次出现去重且保持相遇顺序，不受操作顺序影响
+ok 382 - case4 availableTurns 按升序首次出现去重且保持相遇顺序，不受操作顺序影响
+  ---
+  duration_ms: 81.1563
+  type: 'test'
+  ...
+# Subtest: case5 空日志/不存在轮次/非数值 turn 均有兜底且不误命中；turn=0 是 falsy 走旧 latest 契约
+ok 383 - case5 空日志/不存在轮次/非数值 turn 均有兜底且不误命中；turn=0 是 falsy 走旧 latest 契约
+  ---
+  duration_ms: 137.0089
+  type: 'test'
+  ...
+# Subtest: case6 未选中行的损坏 value_json 不影响读取（证明没有全量 parse）；选中行损坏则响亮报错且同 chat queue 可恢复
+ok 384 - case6 未选中行的损坏 value_json 不影响读取（证明没有全量 parse）；选中行损坏则响亮报错且同 chat queue 可恢复
+  ---
+  duration_ms: 141.4751
+  type: 'test'
+  ...
+# Subtest: case7 读取只做 SQL 筛选且不改写库；已持久化行在多次读后逐字不变
+ok 385 - case7 读取只做 SQL 筛选且不改写库；已持久化行在多次读后逐字不变
+  ---
+  duration_ms: 66.0808
+  type: 'test'
+  ...
+# Subtest: case8 record 仍落 SQL 行且读回一致；pruneRollback 尾部清零契约不变
+ok 386 - case8 record 仍落 SQL 行且读回一致；pruneRollback 尾部清零契约不变
+  ---
+  duration_ms: 68.8932
+  type: 'test'
+  ...
+# Subtest: 旧召回精确迁入SQL后物理删53，保留52并重绑分支；重试不重新导入旧数据
+ok 387 - 旧召回精确迁入SQL后物理删53，保留52并重绑分支；重试不重新导入旧数据
+  ---
+  duration_ms: 88.5284
+  type: 'test'
+  ...
+1..387
+# tests 387
+# suites 0
+# pass 370
+# fail 17
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 24106.3769
+EXIT=1
+ELAPSED_MS=24230

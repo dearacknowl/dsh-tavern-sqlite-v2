@@ -1,6 +1,7 @@
 // 单一回归：作者读源返回缓存/冻结原件时，revision归一化不得在源对象赋值。
 // 只生成本测试独占夹具；不联网、不读真实档、不调用Agent或迁移。
 import assert from 'node:assert/strict'
+import test from 'node:test'
 import { mkdtempSync, rmSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -14,6 +15,8 @@ const helpers = Object.fromEntries([
 ].map(name => [name, () => undefined]))
 helpers.copyJsonTree = value => value === undefined ? undefined : structuredClone(value)
 const stores = []
+// 顶层断言脚本：原 full 在“第二个 store 注册”处抛模块级首错，其后断言无证据；现包具名叶（断言/顺序/cleanup 零改动）。
+test('原全量模块失败：旧读取脱离第二store后断言', async () => {
 try {
   for (const carrier of ['journal', 'block']) {
     let assignments = 0
@@ -50,3 +53,4 @@ try {
   assert.ok(path.basename(root).startsWith('tavern-legacy-detachment-'))
   rmSync(root, { recursive: true, force: true })
 }
+})

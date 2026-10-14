@@ -132,14 +132,14 @@ const PLAY_ONTOGGLE_NEXT = `${MARKER_PLAY}
                     // 否则 waitForTavernRollbackSync(view.rolledBack.sync)；不 global notify、不 invalidate 毁新 view。
                     // failureTarget/failureCleanupReason 经 failureViewRef 活取当前 state.view：该 ref 对象跨 render 稳定，
                     // 控件不因 effect 未重建而吃创建时快照（stale 闭包）。
-                    get failureTarget() { return failureViewRef.current.view && failureViewRef.current.view.failureTarget || null },
+                    get failureTarget() { const liveView = failureViewRef.current.view; return (liveView && (liveView.rollbackTarget || liveView.failureTarget)) || null },
                     get failureCleanupReason() { return failureViewRef.current.view && failureViewRef.current.view.failureCleanupReason || '' },
                     onPurge: async function (turn, failureTarget) {
                         // 清理的**唯一实现**在自有 UI 服务（tavernStorageUi.cleanFailure）。SupersededTurnErrors
                         // 定义在 register(ctx) 之外，函数体内拿不到 ctx ⇒ 由注册语句注入 storageUi 取用函数
                         // （registration 闭包里的 ctx 合法），这里只经 props 调用，不假设存在全局 ctx。
                         var current = failureViewRef.current.view;
-                        var liveTarget = (current && current.failureTarget) || null;
+                        var liveTarget = (current && (current.rollbackTarget || current.failureTarget)) || null;
                         if (!liveTarget) throw new Error('当前视图没有可清理的失败目标，拒绝清理');
                         if (!Number.isSafeInteger(turn) || turn < 1 || turn !== Number(liveTarget.turn)) throw new Error('清理目标不是当前最新失败轮，拒绝清理');
                         var storageUi = typeof props.storageUi === "function" ? props.storageUi() : undefined;
@@ -208,7 +208,7 @@ function upgradeOrdinaryMenuRpc(out, label) {
   return upgraded
 }
 const PLAY_MENU_RPC_NEXT = `${MARKER_PLAY}
-var menuFailureTarget = clearIncomplete ? (rollbackViewState.view && rollbackViewState.view.failureTarget) || null : null;
+var menuFailureTarget = clearIncomplete ? (rollbackViewState.view && (rollbackViewState.view.rollbackTarget || rollbackViewState.view.failureTarget)) || null : null;
 					if (clearIncomplete && !menuFailureTarget) throw new Error('当前没有可安全清理的失败目标，不发送清理请求');/*DSH_PURGE_CLEAR_GUARD*/
 					const result = clearIncomplete
 						? await rpc("rollbackTurn", { expectedTurn: Number(menuFailureTarget.turn), failureTarget: menuFailureTarget }, props.sessionId)
@@ -222,11 +222,15 @@ var menuFailureTarget = clearIncomplete ? (rollbackViewState.view && rollbackVie
 						tavernCoordination.invalidate(props.sessionId);
 						return result;
 					}/*DSH_PURGE_CLEAR_WAIT*/`
+// 菜单基准行的两代精确形态：当前代读统一 rollbackTarget 优先，上一代只读 failureTarget。
+// 升级只认这两代**完整自有块**（半截/外改块仍不匹配 ⇒ fail-closed），不猜删。
+const MENU_TARGET_NEW_LINE = 'var menuFailureTarget = clearIncomplete ? (rollbackViewState.view && (rollbackViewState.view.rollbackTarget || rollbackViewState.view.failureTarget)) || null : null;'
+const MENU_TARGET_OLD_LINE = 'var menuFailureTarget = clearIncomplete ? (rollbackViewState.view && rollbackViewState.view.failureTarget) || null : null;'
 // 当前菜单只委托共享服务；回执身份/同连接等待/定向刷新均归 cleanFailure。
 const MENU_DELEGATED_MARKER = '// [dsh-tavern-error-purge-menu-delegated:v1]'
 const PLAY_MENU_DELEGATED = `${MARKER_PLAY}
 ${MENU_DELEGATED_MARKER}
-var menuFailureTarget = clearIncomplete ? (rollbackViewState.view && rollbackViewState.view.failureTarget) || null : null;
+var menuFailureTarget = clearIncomplete ? (rollbackViewState.view && (rollbackViewState.view.rollbackTarget || rollbackViewState.view.failureTarget)) || null : null;
 					if (clearIncomplete && !menuFailureTarget) throw new Error('当前没有可安全清理的失败目标，不发送清理请求');
 					const result = clearIncomplete
 						? await (async function () {
@@ -287,11 +291,14 @@ function ensureDelegatedMenu(source) {
     // 只替换模板的五tab基础缩进一次，余下tab原样保留；不能再次匹配替换后的缩进。
     const render = text => text.replace(/\n\t{5}/g, () => '\n' + indent)
     const expectedTurn = out.includes(RETRY_RPC_NEW) ? 'rollbackRetryTarget || ordinaryTurn' : 'ordinaryTurn'
-    const choices = [false, true].map(inline => render(PLAY_MENU_RPC_NEXT
+    const menuTemplates = PLAY_MENU_RPC_NEXT.includes(MENU_TARGET_NEW_LINE)
+      ? [PLAY_MENU_RPC_NEXT, PLAY_MENU_RPC_NEXT.replace(MENU_TARGET_NEW_LINE, MENU_TARGET_OLD_LINE)]
+      : (() => { throw new Error('干净清理菜单模板基准行未命中：模板已变，拒绝猜删') })()
+    const choices = [false, true].flatMap(inline => menuTemplates.map(template => render(template
       .replace('/*DSH_PURGE_CLEAR_GUARD*/', inline ? MENU_CLEAR_GUARD : '')
       .replace('/*DSH_PURGE_RECEIPT_REQUIRED*/', MENU_RECEIPT_REQUIRED)
       .replace('/*DSH_PURGE_CLEAR_WAIT*/', inline ? MENU_CLEAR_WAIT_BLOCK : '')
-      .replace('{ expectedTurn: targetTurn }', '{ expectedTurn: ' + expectedTurn + ' }')))
+      .replace('{ expectedTurn: targetTurn }', '{ expectedTurn: ' + expectedTurn + ' }'))))
     const oldBlock = choices.find(text => out.slice(markerAt).startsWith(text))
     if (!oldBlock) throw new Error('干净清理菜单旧块不完整/被修改，拒绝猜删')
     out = out.slice(0, markerAt) + render(PLAY_MENU_DELEGATED.replace('{ expectedTurn: targetTurn }', '{ expectedTurn: ' + expectedTurn + ' }')) + out.slice(markerAt + oldBlock.length)
@@ -362,12 +369,13 @@ const PLAY_EFFECT_DECL_NEXT = `\t\t\t// 目标身份/reason 的稳定 key：目�
 \t\t\t// 自包含内联（不引用 bundle 外符号）：拆分客户端的 play-controls 单文件也会被本变换处理。
 \t\t\t// 不能依赖 view/target 对象本身——每次投影都新建 target 对象，按引用依赖会每 render 重建 observer。
 \t\t\tconst failureTargetKey = (function (view) {
-\t\t\t\tconst target = view && view.failureTarget || null;
+\t\t\t\tconst target = view && (view.rollbackTarget || view.failureTarget) || null;
 \t\t\t\tconst reason = String(view && view.failureCleanupReason || "");
 \t\t\t\tif (!target) return JSON.stringify([null, reason]);
 \t\t\t\tconst field = function (value) { return value === undefined || value === null ? null : value };
 \t\t\t\treturn JSON.stringify([field(target.chatId), field(target.sessionId), field(target.kind), field(target.turn), field(target.operationId),
-\t\t\t\t\tfield(target.branchId), field(target.revision), field(target.endSeq), field(target.eventCount), field(target.rollbackId), reason]);
+\t\t\t\t\tfield(target.branchId), field(target.revision), field(target.endSeq), field(target.eventCount), field(target.rollbackId),
+\t\t\t\t\tfield(target.nativeAnchor && target.nativeAnchor.turn), field(target.nativeAnchor && target.nativeAnchor.input), field(target.nativeAnchor && target.nativeAnchor.reply), reason]);
 \t\t\t})(state.view);
 ${PLAY_EFFECT_DECL_ANCHOR}`
 // 2026-10-10 修「控件拿不到 sessions」：作者在 conversation.input.dock 的同一次注册里给 CandidateQuestion/CandidateDockActions
@@ -415,7 +423,7 @@ function applyPlayControlsSupersededState(source, label) {
     if (!source.includes('failureViewRef.current = state;')) throw new Error('干净清理 ref 标记不完整：' + label)
     if (!source.includes('var current = failureViewRef.current.view;')) throw new Error('干净清理 onPurge 未接 ref：' + label)
   } else source = source.replace(PLAY_STATE_ANCHOR, PLAY_STATE_NEXT)
-  if (!source.includes('get failureTarget() { return failureViewRef.current.view && failureViewRef.current.view.failureTarget || null }')
+  if (!(source.includes('get failureTarget() { return failureViewRef.current.view && failureViewRef.current.view.failureTarget || null }') || source.includes('get failureTarget() { const liveView = failureViewRef.current.view;'))
     || !source.includes("get failureCleanupReason() { return failureViewRef.current.view && failureViewRef.current.view.failureCleanupReason || '' }")) {
     throw new Error('干净清理 getter 未接 ref：' + label)
   }
@@ -424,6 +432,11 @@ function applyPlayControlsSupersededState(source, label) {
   if (source.split(PLAY_EFFECT_DECL_ANCHOR).length !== 2) throw new Error('干净清理锚点缺失/不唯一：' + label + '-effect')
   if (!source.includes('const failureTargetKey = (function (view) {')) source = source.replace(PLAY_EFFECT_DECL_ANCHOR, PLAY_EFFECT_DECL_NEXT)
   if (!source.includes('failureTargetKey')) throw new Error('干净清理目标身份 key 未接线：' + label)
+  // 旧代 getter（只读 view.failureTarget）就地升级为统一 rollbackTarget 优先：已施缝树否则 purge 永远 disabled。
+  const PURGE_GETTER_OLD = 'get failureTarget() { return failureViewRef.current.view && failureViewRef.current.view.failureTarget || null }'
+  const PURGE_GETTER_NEW = 'get failureTarget() { const liveView = failureViewRef.current.view; return (liveView && (liveView.rollbackTarget || liveView.failureTarget)) || null }'
+  if (source.includes(PURGE_GETTER_OLD)) source = source.replace(PURGE_GETTER_OLD, PURGE_GETTER_NEW)
+  if (!source.includes(PURGE_GETTER_NEW)) throw new Error('干净清理 getter 未统一到 rollbackTarget：' + label)
   return source
 }
 export function applyErrorPurgeTurnControlsTransform(source) {
@@ -441,9 +454,22 @@ export function applyErrorPurgeTurnControlsTransform(source) {
   return out
 }
 export function applyErrorPurgePlayControlsTransform(source) {
+  // getter 归一（旧代"只读 view.failureTarget"⇒统一 rollbackTarget 优先）：**已施缝树也必须在入口就地升级**，
+  // 否则已装现场 purge/菜单永远 disabled（升级不能只放在首次施缝路径里）。
+  const PURGE_GETTER_OLD_TEXT = 'get failureTarget() { return failureViewRef.current.view && failureViewRef.current.view.failureTarget || null }'
+  const PURGE_GETTER_NEW_TEXT = 'get failureTarget() { const liveView = failureViewRef.current.view; return (liveView && (liveView.rollbackTarget || liveView.failureTarget)) || null }'
+  if (source.includes(PURGE_GETTER_OLD_TEXT)) source = source.replace(PURGE_GETTER_OLD_TEXT, PURGE_GETTER_NEW_TEXT)
+  // 目标身份 key 归一：统一目标（kind/op/branch/revision + nativeAnchor 坐标）必须进入 key，且优先读 rollbackTarget。
+  const KEY_TARGET_OLD = 'const target = view && view.failureTarget || null;'
+  const KEY_TARGET_NEW = 'const target = view && (view.rollbackTarget || view.failureTarget) || null;'
+  const KEY_FIELDS_OLD = 'field(target.branchId), field(target.revision), field(target.endSeq), field(target.eventCount), field(target.rollbackId), reason]);'
+  const KEY_FIELDS_NEW = `field(target.branchId), field(target.revision), field(target.endSeq), field(target.eventCount), field(target.rollbackId),
+\t\t\t\t\tfield(target.nativeAnchor && target.nativeAnchor.turn), field(target.nativeAnchor && target.nativeAnchor.input), field(target.nativeAnchor && target.nativeAnchor.reply), reason]);`
+  if (source.includes(KEY_TARGET_OLD)) source = source.replace(KEY_TARGET_OLD, KEY_TARGET_NEW)
+  if (source.includes(KEY_FIELDS_OLD)) source = source.replace(KEY_FIELDS_OLD, KEY_FIELDS_NEW)
   if (source.includes(MENU_DELEGATED_MARKER)) {
     for (const needle of ['onToggle: undefined,', 'const failureViewRef = React.useRef(state);', 'failureViewRef.current = state;',
-      'get failureTarget() { return failureViewRef.current.view && failureViewRef.current.view.failureTarget || null }',
+      'get failureTarget() {',
       'get failureCleanupReason() { return failureViewRef.current.view && failureViewRef.current.view.failureCleanupReason ||',
       'const failureTargetKey = (function (view) {', 'field(target.endSeq)', 'field(target.rollbackId)', '[props.sessionId, revision, failureTargetKey]);',
       'storageUi.cleanFailure(props.sessionId, turn, failureTarget || liveTarget)', 'if (clearIncomplete) {']) {
@@ -457,7 +483,7 @@ export function applyErrorPurgePlayControlsTransform(source) {
     if (source.split(MARKER_PLAY).length !== 4 || !source.includes('onToggle: undefined,') || !source.includes('get failureTarget()')
       || !source.includes('menuFailureTarget') || source.includes(PLAY_ONTOGGLE_OLD)
       || !source.includes('const failureViewRef = React.useRef(state);')
-      || !source.includes('get failureTarget() { return failureViewRef.current.view && failureViewRef.current.view.failureTarget || null }')
+      || !source.includes('get failureTarget() {')
       || !source.includes('const failureTargetKey = (function (view) {') || !source.includes('field(target.endSeq)') || !source.includes('var targetCompare = function (ft, cft) {') || !source.includes('var menuMismatch = targetCompare(menuFailureTarget, cft);') || !source.includes('storageUi.cleanFailure(props.sessionId, turn, failureTarget || liveTarget)') || !source.includes('精简清理未接线') || !source.includes('清理未确认目标失败轮，不更新本地状态') || !(source.includes('回退同步尚未接线') || source.includes('回退已落盘，但宿主缺少同连接同步消费者')) || !(source.includes(MENU_WAIT_ANCHOR) || (source.includes(MENU_CLEAR_GUARD.trim()) && source.includes('await props.sessions.waitForTavernRollbackSync(result && result.view && result.view.rolledBack && result.view.rolledBack.sync);') && source.includes('if (clearIncomplete && !(result && result.view && result.view.rolledBack && result.view.rolledBack.alreadyClean === true)) {')))
       || !source.includes('var storageUi = typeof props.storageUi === "function" ? props.storageUi() : undefined;')
       || source.split('[props.sessionId, revision, failureTargetKey]);').length !== 2

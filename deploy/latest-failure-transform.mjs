@@ -1,6 +1,7 @@
 // 最新失败清理只接当前尾部的确切目标，不从旧失败挑选删除范围。
 // native-only（terminal guard error，无 op/无基准）由后端 inspectNativeFailureTail 只读判定后签发的确切目标承担；
 // 前端一律"最新优先"：native 末轮更晚（或同轮但无 body 操作）时必须先物理清它，不得把更旧的 body 目标当当前失败。
+import { parse } from '../lib/vendor/acorn/acorn.mjs'
 const HOST_MARKER = '// [dsh-tavern-latest-failure-host:v1]'
 const VIEW_MARKER = '// [dsh-tavern-latest-failure-view:v1]'
 // R1 冷普通回退证据：宿主 DI 用 **SDK 真 fold** 派生当前模型面 seq 列表（唯一权威仍是 events）。
@@ -34,7 +35,7 @@ const LEGACY_HELPER = `function latestFailureTarget(chat, replayTarget, evidence
     if (!terminalHasBody && native.turn >= newestKnown) return null
   }
   if (narrow && narrow.cleanable === true && Number.isSafeInteger(revision) && Number.isSafeInteger(Number(narrow.revision)) && Number(narrow.revision) === Number(revision)
-    && narrowTurn !== null && narrowTurn >= 1 && narrow.operationId) {
+    && narrowTurn !== null && narrowTurn >= 1 && (narrow.operationId === undefined || narrow.operationId)) {
     return { chatId: chat.id, sessionId: chat.sessionId, turn: narrowTurn, branchId: narrow.branchId, revision: Number(narrow.revision), operationId: narrow.operationId }
   }
   // 冷视图（作者 nodes 无 session ⇒ replayTarget 为 null）只允许用**可信 native 尾轮号**去选 body；
@@ -42,7 +43,7 @@ const LEGACY_HELPER = `function latestFailureTarget(chat, replayTarget, evidence
   const turn = replayTurn !== null ? replayTurn : (native && Number.isSafeInteger(native.turn) ? native.turn : null)
   if (turn === null || turn < 1 || !Number.isSafeInteger(revision) || !chat.timeline?.branchId) return null
   const entry = Object.entries(chat.timeline.operations || {}).find(([id, op]) => op?.kind === 'body' && Number(op.turn) === turn)
-  if (!entry || entry[1].status === 'completed' || !(entry[1].businessBefore || entry[1].rowBefore)) return null
+  if (!entry || !(entry[1].businessBefore || entry[1].rowBefore)) return null
   if ((chat.timeline.checkpoints || []).some(cp => Number(cp.turn) >= turn)) return null
   if ((chat.messages || []).some(row => Number(row.turn) > turn)) return null
   if (Object.values(chat.timeline.operations || {}).some(op => Number(op?.turn) > turn)) return null
@@ -143,6 +144,14 @@ export function applyLatestFailureHostTransform(source) {
   return addIdleSignals(EVIDENCE_IMPORT + EVIDENCE_FOLD_LINE + next)
 }
 export function applyLatestFailureViewTransform(source) {
+  if(source.includes('// [dsh-tavern-latest-send-undo:v1]') && source.includes('void replayTarget')) {
+    // 已统一代不再复活旧分类器；仍验证唯一自有helper/字段与原生判定导入，半截块拒绝。
+    const funcs=parse(source,{ecmaVersion:'latest',sourceType:'module'}).body.filter(node=>node.type==='FunctionDeclaration')
+    if(source.split(VIEW_MARKER).length!==2 || ['latestFailureTarget','latestFailureCleanupReason'].some(name=>funcs.filter(node=>node.id?.name===name).length!==1)
+      || !source.includes("import { inspectNativeFailureTail } from './storage-rollback.js'")
+      || !source.includes('canClearIncompleteReply: latestFailureTarget(chat, replayTarget, evidence) !== null,'))throw new Error('统一撤销兼容视图接线不完整')
+    return source
+  }
   const fields = `      failureTarget: latestFailureTarget(chat, replayTarget, evidence),
       failureCleanupReason: latestFailureCleanupReason(chat, replayTarget, evidence),`
   const helper = `function latestFailureTarget(chat, replayTarget, evidence) {
@@ -151,26 +160,8 @@ export function applyLatestFailureViewTransform(source) {
   if (!evidence || evidence.cleanupIdle !== true) return null
   if (evidence && (evidence.foregroundActive === true || evidence.backgroundActive === true)) return null
   if (evidence && evidence.activity && (evidence.activity.busy === true || evidence.activity.phase === 'pending' || evidence.activity.phase === 'running')) return null
-  // 终止失败生命周期（当前已证最小必要合同）：只有"最新 turn/start 之后同轮出现 turn/end 且 reason 为 error/aborted"才允许签**新 body 目标**；
-  // 仍 active（无 end）或 end completed 一律不签——停止中的轮没有明确失败生命周期，不提示清理是安全的。
-  const failureEnding = (source) => {
-    const list = source && Array.isArray(source.events) ? source.events
-      : (source && source.session && typeof source.session.snapshotEvents === 'function' ? source.session.snapshotEvents()
-        : (source && Array.isArray(source.session && source.session.events) ? source.session.events : null))
-    if (!list || list.length === 0) return 'none'
-    let start = -1
-    for (let index = list.length - 1; index >= 0; index -= 1) if (list[index] && list[index].type === 'turn/start') { start = index; break }
-    if (start < 0) return 'none'
-    for (let index = start + 1; index < list.length; index += 1) {
-      const event = list[index]
-      if (event && event.type === 'turn/end' && Number(event.data && event.data.turn) === Number(list[start].data && list[start].data.turn)) {
-        const kind = event.data && event.data.reason ? event.data.reason.kind : null
-        return kind === 'error' || kind === 'aborted' ? kind : 'completed'
-      }
-    }
-    return 'active'
-  }
-  const ending = failureEnding(evidence)
+  // 撤销资格不按终态、输出形态或正文/变量形态分类：只要身份、版本、尾部和真实发轮前基准成立，就签统一清理目标。
+  // active/无 end 仍必须先满足 cleanupIdle；执行端随后会取消并等待静止，再做纯尾预检，避免卡死或误删。
   // 窗口投影副本（session-window-projector:148）显式把 _storageRevision 置 undefined 以保作者窗口形状，
   // 该副本上可用的是同快照的 window.revision（windowRevision）。pin 必须二选一，不把 _storageRevision 塞回窗口副本。
   const revision = Number.isSafeInteger(chat.windowRevision) ? chat.windowRevision : chat._storageRevision
@@ -192,18 +183,17 @@ export function applyLatestFailureViewTransform(source) {
     // 同一轮但该轮根本没有 body 操作（native-only，如 43）⇒ 必须先物理清 native 失败，再谈下一轮 body。
     if (!terminalHasBody && native.turn >= newestKnown) return null
   }
-  if (narrow && narrow.cleanable === true && (ending === 'error' || ending === 'aborted')
+  if (narrow && narrow.cleanable === true
     && Number.isSafeInteger(revision) && Number.isSafeInteger(Number(narrow.revision)) && Number(narrow.revision) === Number(revision)
-    && narrowTurn !== null && narrowTurn >= 1 && narrow.operationId) {
+    && narrowTurn !== null && narrowTurn >= 1 && (narrow.operationId === undefined || narrow.operationId)) {
     return { chatId: chat.id, sessionId: chat.sessionId, turn: narrowTurn, branchId: narrow.branchId, revision: Number(narrow.revision), operationId: narrow.operationId }
   }
   // 冷视图（作者 nodes 无 session ⇒ replayTarget 为 null）只允许用**可信 native 尾轮号**去选 body；
   // 其后仍是同一套严格检查：该轮 body 操作存在、未完成、有基准，且尾部无后继正文/检查点/操作。
   const turn = replayTurn !== null ? replayTurn : (native && Number.isSafeInteger(native.turn) ? native.turn : null)
   if (turn === null || turn < 1 || !Number.isSafeInteger(revision) || !chat.timeline?.branchId) return null
-  if (ending !== 'error' && ending !== 'aborted') return null // 新 body 目标只认终止失败生命周期（active/无 end/completed 都不得签）
   const entry = Object.entries(chat.timeline.operations || {}).find(([id, op]) => op?.kind === 'body' && Number(op.turn) === turn)
-  if (!entry || !['failed', 'running'].includes(entry[1].status) || !(entry[1].businessBefore || entry[1].rowBefore)) return null
+  if (!entry || !(entry[1].businessBefore || entry[1].rowBefore)) return null
   if ((chat.timeline.checkpoints || []).some(cp => Number(cp.turn) >= turn)) return null
   if ((chat.messages || []).some(row => Number(row.turn) > turn)) return null
   if (Object.values(chat.timeline.operations || {}).some(op => Number(op?.turn) > turn)) return null
@@ -211,29 +201,12 @@ export function applyLatestFailureViewTransform(source) {
 }
 function latestFailureCleanupReason(chat, replayTarget, evidence) {
   const revision = Number.isSafeInteger(chat.windowRevision) ? chat.windowRevision : chat._storageRevision
-  const failureEnding = (source) => {
-    const list = source && Array.isArray(source.events) ? source.events
-      : (source && source.session && typeof source.session.snapshotEvents === 'function' ? source.session.snapshotEvents()
-        : (source && Array.isArray(source.session && source.session.events) ? source.session.events : null))
-    if (!list || list.length === 0) return 'none'
-    let start = -1
-    for (let index = list.length - 1; index >= 0; index -= 1) if (list[index] && list[index].type === 'turn/start') { start = index; break }
-    if (start < 0) return 'none'
-    for (let index = start + 1; index < list.length; index += 1) {
-      const event = list[index]
-      if (event && event.type === 'turn/end' && Number(event.data && event.data.turn) === Number(list[start].data && list[start].data.turn)) {
-        const kind = event.data && event.data.reason ? event.data.reason.kind : null
-        return kind === 'error' || kind === 'aborted' ? kind : 'completed'
-      }
-    }
-    return 'active'
-  }
-  const ending = failureEnding(evidence)
-  // 活动态不提示错误；已终止的遗留不完整轮使用同一签名判定的说明。
+  // 仅用于说明与记录生命周期，不参与目标资格；目标资格由真实前像与物理安全护栏决定。
+
   if (!evidence || evidence.cleanupIdle !== true || evidence.foregroundActive || evidence.backgroundActive || evidence.activity?.busy || ['pending','running'].includes(evidence.activity?.phase)) return ''
   const native = inspectNativeFailureTail(chat, evidence, revision)
   if (native?.incomplete || native?.target?.incomplete) return native.reason
-  if ((ending === 'active' || ending === 'completed' || ending === 'none') && !(chat.rollbackPending && chat.rollbackPending.failureTarget)) return ''
+  // ending 只用于诊断，不作为撤销资格白名单。
   // native 挡住了更旧 body 目标时优先报 native 的真实原因（只有确实没有可清理目标才给说明）。
   if (native && !native.target && Number.isSafeInteger(native.turn) && typeof native.reason === 'string' && native.reason !== ''
     && !latestFailureTarget(chat, replayTarget, evidence)) return native.reason
@@ -249,70 +222,33 @@ function latestFailureCleanupReason(chat, replayTarget, evidence) {
   if (source.includes(VIEW_MARKER)) {
     // 旧代 marked 源（已证 shape）：按**完整字面** LEGACY_HELPER 整段替换为新 helper；半截/未知由后续 required 检查抛错。
     if (source.includes(LEGACY_HELPER)) source = once(source, LEGACY_HELPER, helper)
-    if (!source.includes('const failureEnding = (source) => {')) {
-      const ENDING = `  const failureEnding = (source) => {
-    const list = source && Array.isArray(source.events) ? source.events
-      : (source && source.session && typeof source.session.snapshotEvents === 'function' ? source.session.snapshotEvents()
-        : (source && Array.isArray(source.session && source.session.events) ? source.session.events : null))
-    if (!list || list.length === 0) return 'none'
-    let start = -1
-    for (let index = list.length - 1; index >= 0; index -= 1) if (list[index] && list[index].type === 'turn/start') { start = index; break }
-    if (start < 0) return 'none'
-    for (let index = start + 1; index < list.length; index += 1) {
-      const event = list[index]
-      if (event && event.type === 'turn/end' && Number(event.data && event.data.turn) === Number(list[start].data && list[start].data.turn)) {
-        const kind = event.data && event.data.reason ? event.data.reason.kind : null
-        return kind === 'error' || kind === 'aborted' ? kind : 'completed'
-      }
-    }
-    return 'active'
-  }
-  const ending = failureEnding(evidence)
-`
-      let up = once(source, 'function latestFailureTarget(chat, replayTarget, evidence) {\n', 'function latestFailureTarget(chat, replayTarget, evidence) {\n' + ENDING)
-      up = once(up, 'function latestFailureCleanupReason(chat, replayTarget, evidence) {\n', 'function latestFailureCleanupReason(chat, replayTarget, evidence) {\n' + ENDING)
-      up = once(up, '  if (narrow && narrow.cleanable === true && Number.isSafeInteger(revision) && Number.isSafeInteger(Number(narrow.revision)) && Number(narrow.revision) === Number(revision)',
-        "  if (narrow && narrow.cleanable === true && (ending === 'error' || ending === 'aborted')\n    && Number.isSafeInteger(revision) && Number.isSafeInteger(Number(narrow.revision)) && Number(narrow.revision) === Number(revision)")
-      up = once(up, "  const entry = Object.entries(chat.timeline.operations || {}).find(([id, op]) => op?.kind === 'body' && Number(op.turn) === turn)\n  if (!entry || entry[1].status === 'completed' || !(entry[1].businessBefore || entry[1].rowBefore)) return null",
-        "  if (ending !== 'error' && ending !== 'aborted') return null\n  const entry = Object.entries(chat.timeline.operations || {}).find(([id, op]) => op?.kind === 'body' && Number(op.turn) === turn)\n  if (!entry || !['failed', 'running'].includes(entry[1].status) || !(entry[1].businessBefore || entry[1].rowBefore)) return null")
-      up = once(up, '  if (narrow && narrow.cleanable !== true && narrow.reason) return narrow.reason',
-        "  if (narrow && narrow.cleanable !== true && narrow.reason) return narrow.reason\n  if (ending === 'active' || ending === 'completed' || ending === 'none') return ''")
-      source = up
-    }
-    // 已施行的当前代代码（已有 failureEnding，只差 body 候选状态）不走上面那个 if：这里对 source 本体换旧行。
-    // 延迟 discard 读脚本失败会让整次 update 回滚、body 停在 running；候选不等于可直接清，仍有 failureEnding 门禁。
-    if (source.includes("entry[1].status !== 'failed'")) {
-      source = once(source, "  if (!entry || entry[1].status !== 'failed' || !(entry[1].businessBefore || entry[1].rowBefore)) return null",
-        "  if (!entry || !['failed', 'running'].includes(entry[1].status) || !(entry[1].businessBefore || entry[1].rowBefore)) return null")
+    // 已施完整兼容 helper 统一替换为本代，不允许遗留状态/终态资格门。
+    const functions=parse(source,{ecmaVersion:'latest',sourceType:'module'}).body.filter(node=>node.type==='FunctionDeclaration' && ['latestFailureTarget','latestFailureCleanupReason'].includes(node.id?.name))
+    if(functions.length!==2 || new Set(functions.map(node=>node.id.name)).size!==2)throw Error('最新失败兼容helper缺失或不唯一')
+    const replacements=parse(helper,{ecmaVersion:'latest',sourceType:'module'}).body
+    for(const node of functions.toReversed()) {
+      const replacement=replacements.find(value=>value.id?.name===node.id.name)
+      source=source.slice(0,node.start)+helper.slice(replacement.start,replacement.end)+source.slice(node.end)
     }
     // R1：作者节点推导改走证据节点（冷档 evidence.nodes / live 仍 session.surface.nodes）；已升级则原样。
     source = upgradeAuthorNodesLine(source)
     // 清理目标可独立于普通回退surface；菜单必须同样可用，目标轮号来自同一签名。
     source=upgradeIncompleteAvailability(source)
-    // 旧 marked 视图（helper 无静止门）必须**就地升级**；不完整/未知形状仍旧拒。
-    const gate = helper.slice(helper.indexOf('  // 前后台静止门'), helper.indexOf('  // 终止失败生命周期'))
-    const newReason = `  // 活动态不提示错误；已终止的遗留不完整轮使用同一签名判定的说明。
-  if (!evidence || evidence.cleanupIdle !== true || evidence.foregroundActive || evidence.backgroundActive || evidence.activity?.busy || ['pending','running'].includes(evidence.activity?.phase)) return ''
-  const native = inspectNativeFailureTail(chat, evidence, revision)
-  if (native?.incomplete || native?.target?.incomplete) return native.reason
-  if ((ending === 'active' || ending === 'completed' || ending === 'none') && !(chat.rollbackPending && chat.rollbackPending.failureTarget)) return ''`
-    const oldReason = `  // 活动/成功/无轮先截断说明（pending-retry 说明仍优先）：不让 native inspector 对 running body 的“须清理”文案漏出
-  if ((ending === 'active' || ending === 'completed' || ending === 'none') && !(chat.rollbackPending && chat.rollbackPending.failureTarget)) return ''
-  const native = inspectNativeFailureTail(chat, evidence, revision)`
-    const oldIncompleteReason='  if (native?.target?.incomplete) return native.reason'
-    const newIncompleteReason='  if (native?.incomplete || native?.target?.incomplete) return native.reason'
-    if(source.includes(oldIncompleteReason))source=once(source,oldIncompleteReason,newIncompleteReason)
-    const previousHelper = helper.replace(gate, '').replace(newReason, oldReason)
-    if (!source.includes(helper) && source.includes(previousHelper)) source = once(source,previousHelper,helper)
+    // 旧 marked 视图只按完整 helper 迁移；不再引入终态生命周期分类或原因白名单。
     source = upgradeLatestFailureHelper(source, helper)
-    const required = [IMPORT_LINE, helper, fields,
+    const required = [IMPORT_LINE,
+      'function latestFailureTarget(chat, replayTarget, evidence) {',
+      'function latestFailureCleanupReason(chat, replayTarget, evidence) {',
+      'failureTarget: latestFailureTarget(chat, replayTarget, evidence),',
+      'failureCleanupReason: latestFailureCleanupReason(chat, replayTarget, evidence),',
       'const revision = Number.isSafeInteger(chat.windowRevision) ? chat.windowRevision : chat._storageRevision',
       'canClearIncompleteReply: latestFailureTarget(chat, replayTarget, evidence) !== null,',
       'failureTarget: latestFailureTarget(chat, replayTarget, evidence),',
       'failureCleanupReason: latestFailureCleanupReason(chat, replayTarget, evidence),',
       cacheHitReturn.slice(cacheHitReturn.indexOf('failureTarget: '))]
-    const hasNewPendingForm = source.includes('canRollback: true, canClearIncompleteReply: !!chat.rollbackPending.failureTarget,')
-    if (source.split(VIEW_MARKER).length !== 2 || required.some(block => !source.includes(block)) || !hasNewPendingForm) throw new Error('最新失败视图接线不完整')
+     if (source.includes('canRollback: rollbackState.canRollback,')) source = once(source, 'canRollback: rollbackState.canRollback,', 'canRollback: rollbackState.canRollback || latestFailureTarget(chat, replayTarget, evidence) !== null,')
+
+    if (source.split(VIEW_MARKER).length !== 2 || required.some(block => !source.includes(block))) throw new Error('最新失败视图接线不完整')
     return source
   }
   let next = IMPORT_LINE + VIEW_MARKER + '\n' + helper + source

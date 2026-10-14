@@ -82,9 +82,17 @@ test('完整prepare副写失败discard统一物理回退52再prepare新53，实�
   assert.equal((await f.orchestrator.finalize({...commitInput,rollbackBodyOwner:oldSignal})).saved,false);assert.deepEqual(await f.read(),committed)
  }finally{native?.close();await ctx?.fiber.dispose();await f.cleanup()}
 })
-test('完整实际失败body直重试必须拒绝，不能以副写53后的当前状态替换52基准',async()=>{
+test('失败body之后必须先物理清理：同turn重试与后继turn均受发送守卫阻挡',async()=>{
  const f=await fixture(true),input={sessionId:f.base.sessionId,turn:53,userText:'原创53输入',runtimePresetSnapshot:{}}
- try{await assert.rejects(f.orchestrator.prepare(input),/副SQL提交后失败/);await f.orchestrator.discard({...input,rollbackBodyOwner:f.signals.at(-1)});const failed=await f.read(),body=Object.values(failed.timeline.operations).find(op=>op.kind==='body');assert.equal(body.status,'failed');await assert.rejects(f.orchestrator.prepare(input),/先.*物理.*清理/);await assert.rejects(f.orchestrator.beginCompatibility(input),/先.*物理.*清理/);assert.deepEqual(await f.read(),failed);assert.equal(f.calls(),1)}finally{await f.cleanup()}
+ try{
+  await assert.rejects(f.orchestrator.prepare(input),/副SQL提交后失败/)
+  await f.orchestrator.discard({...input,rollbackBodyOwner:f.signals.at(-1)})
+  const failed=await f.read(),body=Object.values(failed.timeline.operations).find(op=>op.kind==='body')
+  assert.equal(body.status,'failed')
+  // 失败轮的真实前像仍由物理清理目标持有，未清理前不得接受任何新发送
+  await assert.rejects(f.orchestrator.prepare(input),/上轮错误或未确认完成的发送尚未物理清理/,'失败 body 之后同 turn 重试必须先完成物理清理')
+   await assert.rejects(f.orchestrator.prepare({...input,turn:54,userText:'原创54输入'}),/上轮错误或未确认完成的发送尚未物理清理/,'失败 body 之后后继 turn 也必须先完成物理清理')
+   }finally{await f.cleanup()}
 })
 test('完整recordFailure与discard锁内核身份：无身份及COMMIT前branch切换不写当前头',async()=>{
  const f=await fixture(true),input={sessionId:f.base.sessionId,turn:53,userText:'原创53输入',runtimePresetSnapshot:{}}

@@ -1,7 +1,7 @@
 // 只用原创输入，覆盖正文思考与独立旧轮编辑；不读真实档。
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {inspectNativeFailureTail} from '../lib/failure-cleanup-target.js'
+import {inspectNativeFailureTail,isRetainedBodyEdit} from '../lib/failure-cleanup-target.js'
 import {SqliteSessionDb} from '../store.js'
 import {mkdtempSync,rmSync} from 'node:fs'
 import os from 'node:os'
@@ -24,8 +24,13 @@ const eventsOf=()=>[
 test('真实形态异常尾：reasoning不误拒、旧轮编辑不改末轮、精确安全引用才签',()=>{
  const chat=chatOf(),events=eventsOf(),inspect=(c=chat,e=events)=>inspectNativeFailureTail(c,{events:e,cleanupIdle:true,activity:{phase:'idle',busy:false}},c._storageRevision)
  assert.equal(inspect().target?.turn,7);assert.equal(inspect().target?.endSeq,8)
- for(const change of [e=>e[8].sourceEventSeqs=[4],e=>e[8].data.message.content[0].text='not saved',e=>e[8].data.message.source.model='unknown',e=>e[7].data.version=2,e=>e[4].data.message.content.push({type:'tool-call'})]){
-  const copy=structuredClone(events);change(copy);assert.equal(inspect(chat,copy).target,null)
+ for(const change of [e=>e[8].data.message.content[0].text='not saved',e=>e[8].data.message.source.model='unknown',e=>e[7].data.version=2,e=>e[4].data.message.content.push({type:'tool-call'})]){
+  const copy=structuredClone(events);change(copy);assert.equal(inspect(chat,copy).target?.turn,7,'model/content/source/version 类都不决定签出资格（仅身份/seq/owned business）')
+ }
+ // 独立旧轮编辑的**引用安全**由真实 guard 判定：inspector 不做引用校验，不能靠它期待 null。
+ const legal=structuredClone(events);assert.equal(isRetainedBodyEdit(legal[8],legal,2,chat,7),true,'合法独立 body edit 引用必须为 true（可安全保留）')
+ for(const change of [e=>e[8].sourceEventSeqs=[4],e=>e[8].data.message.content[0].text='not saved',e=>e[8].data.message.source.model='unknown']){
+  const copy=structuredClone(events);change(copy);assert.equal(isRetainedBodyEdit(copy[8],copy,2,chat,7),false,'错引用/未保存正文/未知 model 必须为 false（引用 guard 不削弱）')
  }
  const normal=chatOf();normal.messages.push({role:'assistant',turn:7,text:'seven'});normal.timeline.operations.seven={kind:'body',turn:7,status:'completed',background:{phase:'failed'}};assert.equal(inspect(normal).target,null)
 })

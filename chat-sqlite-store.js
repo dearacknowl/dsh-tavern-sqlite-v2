@@ -1,6 +1,6 @@
 import { DatabaseSync } from 'node:sqlite'
 import { isProxy } from 'node:util/types'
-import { assertRollbackChatWritable } from './lib/rollback-barrier.js'
+import { assertRollbackChatWritable, rollbackSchedulingBarrier } from './lib/rollback-barrier.js'
 import { existsSync, mkdirSync, rmSync } from 'node:fs'
 import { readFile, stat } from 'node:fs/promises'
 import { gunzipSync } from 'node:zlib'
@@ -16,6 +16,10 @@ import { writeStatusBarPlacement as commandSetStatusBarPlacement } from './lib/c
 import { readStoryInput as queryStoryInput } from './lib/chat-query-service.js'
 import { readCandidateInput as queryCandidateInput, readSettlementInputNative as querySettlementInput, readTemplateWindowNative as queryTemplateWindow } from './lib/chat-query-service.js'
 import { appendMessages as commandAppendMessages, setMessageFloor as commandSetMessageFloor } from './lib/chat-command-service.js'
+import { randomUUID } from 'node:crypto'
+import { captureRollbackBusinessState, recordRollbackBusinessWrites } from './lib/rollback-business-state.js'
+import { registerSendCapture } from './lib/send-acceptance.js'
+import { assertSendAfterCleanup } from './lib/failure-state.js'
 
 // 本模块**不再直接 import 作者的三个模块**（copy-json-tree / chat-session-state / json-mutation）：
 // 它们是作者的代码，必须由作者树的「薄垫片」注入（见 deploy/chat-sqlite-store.shim.js）。
@@ -861,10 +865,18 @@ export function createChatSqliteStore(options = {}) {
       }
       changes = normalized
       const next = applyJsonChangesShared(state.chat, changes)
+      const undoOperation=recordRollbackBusinessWrites(state.chat,next,metadata,copyJsonTree)
+      if(undoOperation) {
+        changes=[...changes,{op:'set',path:['timeline','operations',undoOperation,'businessBefore'],value:next.timeline.operations[undoOperation].businessBefore}]
+        if(Array.isArray(next.timeline.checkpoints))next.timeline.checkpoints.forEach((cp,index)=>{
+          if(Number(cp.turn)===Number(next.timeline.operations[undoOperation].turn))changes.push({op:'set',path:['timeline','checkpoints',index,'businessBefore'],value:cp.businessBefore})
+        })
+      }
       if (next.id !== chatId || revisionOf(next) !== expectedRevision + 1) throw new Error('Invalid journal patch revision')
       assertWritableChat(chatId, state)
       const db = handle(chatId)
       metadata.assertCurrent?.()
+      if (Number(db.prepare('SELECT revision FROM archive_head WHERE id=1').get()?.revision)!==expectedRevision) return undefined
       // storedChat = 实际落库的形态（老楼 variables 可能已被 K4 修剪进同库快照表）：
       // 写缓存/返回都用它，避免"库是瘦的、内存缓存是全的"这种 hydrate-full-then-remember-huge。
       const written = writeChat(db, chatId, next, expectedRevision + 1, now(), changes)
@@ -892,6 +904,7 @@ export function createChatSqliteStore(options = {}) {
       const current = currentState == null ? undefined : currentState.chat
       assertRollbackChatWritable(current, metadata)
       const produced = await updater(copyJsonTree(current))
+      if (currentState && Number(handle(chatId).prepare('SELECT revision FROM archive_head WHERE id=1').get()?.revision)!==currentState.revision) throw new Error('Chat 存储写入 revision 非连续：异步更新期间发送前像或其他提交已推进，拒绝覆盖')
       if (produced === undefined) return copyJsonTree(current)
       assertCompleteChat(produced)
       // L1（2026-09-30）：脱离草稿用【结构化拷贝】而非 JSON 文本往返。
@@ -915,6 +928,7 @@ export function createChatSqliteStore(options = {}) {
         const baseRevision = currentState.revision
         revision = revisionOf(next)
         if (revision !== baseRevision + 1) throw new Error('Chat 存储写入 revision 非连续，期望 ' + (baseRevision + 1) + '，实际 ' + revision)
+        recordRollbackBusinessWrites(current,next,metadata,copyJsonTree)
         changes = diffJson(current, next)
         if (changes.length === 0) return copyJsonTree(current)
       }
@@ -1615,7 +1629,7 @@ export function createChatSqliteStore(options = {}) {
       let outcome
       try {
         outcome = commandAppendMessages(db, { chatId: id, sessionId: metadata.sessionId, revision: expectedRevision, items, headerSets, timelineUpdate }, {
-          assertWritableChat, now,
+          assertWritableChat, now, rollbackMetadata:metadata,
           archiveLocalWrite: (targetDb, targetChatId, touchedRows, messageCount, options) =>
             variables.prepareLocalWrite(targetDb, targetChatId, touchedRows, messageCount, options),
           applyMessageWrite: ({ revision, keys, messages, timeline, changes }) => {
@@ -1662,7 +1676,7 @@ export function createChatSqliteStore(options = {}) {
         setPatchLeaf(patch, leaf, change.op === 'delete' ? undefined : change.value)
       }
       const outcome = commandSetMessageFloor(db, { chatId: id, sessionId: metadata.sessionId, revision: expectedRevision, index, patch }, {
-        assertWritableChat, now, headerSets,
+        assertWritableChat, now, headerSets, rollbackMetadata:metadata,
         archiveLocalWrite: (targetDb, targetChatId, touchedRows, messageCount, options) =>
           variables.prepareLocalWrite(targetDb, targetChatId, touchedRows, messageCount, options),
         applyMessageWrite: ({ revision, keys, messages, timeline, changes: committed }) => {
@@ -1825,6 +1839,68 @@ export function createChatSqliteStore(options = {}) {
     })
   }
 
+  // 发送接受的同步前像：与普通写口共享连接/行协议/失效路径；不等请求组装。
+  // 同步事务没有await，旧异步updater提交前还必须核SQL revision，防止覆盖新前像。
+  function captureSend(chatId, input) {
+    assertActive(); assertWritableChat(chatId)
+    const db=handle(chatId)
+    if(!db)throw new Error('发送接受缺少已存在的Chat数据库')
+    db.exec('BEGIN IMMEDIATE')
+    let committed=false, written, captureBefore
+    try {
+      observeExternalCommit(chatId,db)
+      const state=assemble(db),chat=state?.chat
+      if(!chat || chat.id!==chatId || chat.sessionId!==input.sessionId)throw new Error('发送前像档/会话身份不一致')
+      assertRollbackChatWritable(chat,{source:'foreground.send-accepted'})
+      if(rollbackSchedulingBarrier.has(input.sessionId))throw new Error('物理回退静止期间禁止接受新发送')
+      if(chat.timeline?.schemaVersion!==1 || !chat.timeline.branchId)throw new Error('发送前像缺少有效剧情时间线')
+      if(input.type==='turn/start')assertSendAfterCleanup(chat,{events:input.events || [],accepting:true})
+      const existingEntry=Object.entries(chat.timeline.operations || {}).find(([,op])=>op?.kind==='body' && Number(op.turn)===input.turn)
+      const existing=existingEntry?.[1]
+      if(input.type==='turn/start' && existing?.businessBefore) { db.exec('COMMIT');committed=true;return }
+      captureBefore=copyJsonTree(chat)
+      const next=copyJsonTree(chat)
+      if(input.type==='turn/start') {
+        next.timeline.operations ||= {}
+        const id=existingEntry?.[0] || 'operation-'+randomUUID()
+        next.timeline.operations[id]={...(existing || {}),id,kind:'body',role:'body',status:'running',turn:input.turn,userText:existing?.userText || '',inputPending:true,
+          nativeStartSeq:input.seq,basedOn:{branchId:chat.timeline.branchId,revision:chat.timeline.revision},beforeRevision:state.revision,
+          beforeParticipants:copyJsonTree(chat.timeline.participants || {}),createdAt:existing?.createdAt || now(),businessBefore:captureRollbackBusinessState(chat)}
+      } else {
+        if(input.data?.source?.kind!=='user' || !existing || existing.nativeAnchor) { db.exec('COMMIT');committed=true;return }
+        const op=next.timeline.operations[existingEntry[0]]
+        // prepare可能先取得claimed输入并补正文operation；原生追加晚于prepare时仍补原始输入锚点，
+        // 但不覆盖已经投影/模板化的userText或发轮前像。
+        if(op.inputPending)op.userText=(input.data.content || []).filter(block=>block?.type==='text').map(block=>String(block.text || '')).join('').trim()
+        op.nativeAnchor={turn:input.turn,input:input.seq,reply:null}
+        delete op.inputPending
+      }
+      next._storageRevision=state.revision+1
+      written=writeChat(db,chatId,next,next._storageRevision,now(),diffJson(chat,next),{inTransaction:true})
+      db.exec('COMMIT');committed=true
+    } finally { if(!committed)db.exec('ROLLBACK') }
+    if(written) {
+      bumpGeneration(chatId); projectionReads.invalidate(chatId,written.touched);forgetState(chatId)
+      rememberState(chatId,generationStamp(chatId),{chat:written.chat,revision:written.touched.revision,legacy:false,frameCount:0,frameBytes:0})
+      const capturedRevision=written.touched.revision
+      return ()=>{
+        // 仅补偿同一同步append被拒；revision CAS确保不覆盖任何后续写入。
+        db.exec('BEGIN IMMEDIATE')
+        let done=false,reverted
+        try {
+          const current=assemble(db)
+          if(current?.revision!==capturedRevision)throw new Error('发送前像补偿版本已变化，拒绝覆盖后续提交')
+          const restored={...captureBefore,_storageRevision:capturedRevision+1}
+          reverted=writeChat(db,chatId,restored,restored._storageRevision,now(),diffJson(current.chat,restored),{inTransaction:true})
+          db.exec('COMMIT');done=true
+        } finally {if(!done)db.exec('ROLLBACK')}
+        bumpGeneration(chatId);projectionReads.invalidate(chatId,reverted.touched);forgetState(chatId)
+        rememberState(chatId,generationStamp(chatId),{chat:reverted.chat,revision:reverted.touched.revision,legacy:false,frameCount:0,frameBytes:0})
+      }
+    }
+  }
+  const unregisterSendCapture=registerSendCapture(dataRoot,captureSend)
+
   /** dispose 之后一切写入响亮失败（读口不会再偷开句柄：handle 返回 null）。 */
   function assertActive() {
     if (disposed) throw new Error('Chat SQLite Store 已 dispose：不能再写入')
@@ -1834,6 +1910,7 @@ export function createChatSqliteStore(options = {}) {
   function dispose() {
     if (disposed) return
     disposed = true
+    unregisterSendCapture()
     for (const db of open.values()) {
       try { db.close() } catch { /* 可能已关 */ }
     }

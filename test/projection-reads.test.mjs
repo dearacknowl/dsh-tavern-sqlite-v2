@@ -99,6 +99,9 @@ try {
     assert.equal((await writer.readViewDelta(CHAT.id,1)).revision,3)
   })
   test('布局/输入删除/压缩帧证据与物理删尾：不伪造覆盖、旧scoped仍是旧版本',async()=>{
+    // 本叶自带初始 revision 夹具：官方 --name 单选时前一叶不跑，起点可能仍是 1；只把 revision 补到 3（已到 3 则空转）。
+    const entry=await writer.read(CHAT.id)
+    for(let revision=entry._storageRevision;revision<3;revision++)await writer.patch(CHAT.id,revision,[{op:'set',path:['_storageRevision'],value:revision+1}])
     const old=await writer.readSessionState(CHAT.id,{scoped:true})
     await writer.patch(CHAT.id,3,[{op:'set',path:['_storageRevision'],value:4},{op:'set',path:['messages',6,'role'],value:'user'},{op:'delete',path:['runtimeInputs','2']}])
     const changed=await writer.readViewDelta(CHAT.id,3);assert.equal(changed.layoutChanged,true);assert.equal(changed.layoutFrom,6)

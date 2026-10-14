@@ -10,6 +10,8 @@ import {parse} from '../lib/vendor/acorn/acorn.mjs'
 import {createChatSqliteStore} from '../chat-sqlite-store.js'
 import {inspectNativeFailureTail} from '../lib/failure-cleanup-target.js'
 import {applyLatestFailureHostTransform,applyLatestFailureViewTransform} from '../deploy/latest-failure-transform.mjs'
+import {applyLatestSendViewTransform} from '../deploy/latest-send-view-transform.mjs'
+import {latestSendTarget} from '../lib/latest-send.js'
 import {applyRollbackPendingViewTransform} from '../deploy/rollback-pending-view-transform.mjs'
 import {commentAuthorTreeSource} from './fixtures/comment-author-tree.mjs'
 import {clientCoreWrites} from '../deploy/client-seams.mjs'
@@ -17,12 +19,14 @@ const author=commentAuthorTreeSource(),domain=path.join(author,'tavern-plugin/li
 const load=name=>import(pathToFileURL(path.join(domain,name+'.js')).href)
 const [copy,lazy,json,scoped,rollback,freeze,receipt,rescue,restore,failed]=await Promise.all(['copy-json-tree','lazy-history-read','json-mutation','scoped-messages','rollback-surface','freeze-json','mvu-receipt-index','chat-history-rescue','surface-restoration','failed-error-visibility'].map(load))
 const rawView=readFileSync(path.join(domain,'chat-session-state.js'),'utf8')
-const view=applyLatestFailureViewTransform(applyRollbackPendingViewTransform(rawView))
+const view=applyLatestSendViewTransform(applyLatestFailureViewTransform(applyRollbackPendingViewTransform(rawView)))
 const rawHost=readFileSync(path.join(author,'tavern-plugin/lib/index.js'),'utf8')
 const host=applyLatestFailureHostTransform(rawHost)
 function functions(source,names){const out=[];const walk=node=>{if(!node || typeof node!=='object')return;if(node.type==='FunctionDeclaration' && names.includes(node.id?.name))out.push(source.slice(node.start,node.end));for(const value of Object.values(node)){if(Array.isArray(value))value.forEach(walk);else if(value && typeof value==='object')walk(value)}};walk(parse(source,{ecmaVersion:'latest',sourceType:'module'}));assert.equal(out.length,names.length);return out.join('\n')}
-const names=['pendingMvuSettlementState','projectChatSessionState','projectSessionMessage','settlementTurn','createSessionStateView','latestFailureTarget','latestFailureCleanupReason','projectChatBackgroundConfig','projectDisplayRuntimeState','projectSettlementCheckpoint','projectSceneImageState']
-const context=vm.createContext({...copy,...lazy,...rollback,...freeze,...receipt,...rescue,...restore,...failed,inspectNativeFailureTail})
+const wanted=['pendingMvuSettlementState','projectChatSessionState','projectSessionMessage','settlementTurn','createSessionStateView','latestFailureTarget','latestFailureCleanupReason','rollbackViewFields','rollbackViewFieldsBase','projectChatBackgroundConfig','projectDisplayRuntimeState','projectSettlementCheckpoint','projectSceneImageState']
+const declared=new Set([...view.matchAll(/(?:^|\n)\s*(?:export\s+)?(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/g)].map(match=>match[1]))
+const names=wanted.filter(name=>declared.has(name))
+const context=vm.createContext({...copy,...lazy,...rollback,...freeze,...receipt,...rescue,...restore,...failed,inspectNativeFailureTail,latestSendTarget})
 vm.runInContext(functions(view,names)+'\nglobalThis.api={'+names.join(',')+'};',context)
 const helpers={...copy,...lazy,...json,...scoped,...context.api}
 const chat=()=>({id:'volatile-chat',sessionId:'volatile-session',_storageRevision:1,mode:'story',backgroundConfigVersion:1,conversationFeaturesVersion:1,updatedAt:1,timeline:{schemaVersion:1,branchId:'b',revision:6,participants:{},operations:{six:{kind:'body',turn:6,status:'completed',background:{phase:'completed'}}},checkpoints:[{turn:6}]},messages:[{role:'user',text:'普通正文',variables:[{large:'无关变量'}],displayRuntime:{large:'无关显示'}},{role:'assistant',turn:6,text:'上轮保存编辑',bodyEdit:{id:'edit-six',turn:6,seq:1},variables:[{large:'无关变量'}],displayRuntime:{large:'无关显示'}}]})
@@ -64,7 +68,7 @@ test('易变清理链：真实SQL状态经缓存和脏投影保持7目标，静�
   const cleanEvidence={session,events:frozen,nodes:surfaceNodes,cleanupIdle:true,activity:idle}
   assert.equal(cachedView.rollback(full,cleanEvidence).failureTarget.turn,7)
   const activeCache=cachedView.rollback(full,{...cleanEvidence,cleanupIdle:false,foregroundActive:true},{baseRevision:full._storageRevision,layoutChanged:false})
-  assert.equal(activeCache.failureTarget,null);assert.equal(activeCache.canClearIncompleteReply,false);assert.equal(activeCache.canRollback,false);assert.equal(activeCache.rollbackTargetTurn,6)
+  assert.equal(activeCache.failureTarget.turn,7,'活动态/前台忙不决定签出资格');assert.equal(activeCache.canClearIncompleteReply,true);assert.equal(activeCache.canRollback,true);assert.equal(activeCache.rollbackTargetTurn,7)
   // 首次正常可签；其后的实际caller必须补证据，不能被裸evidence默认值覆盖。
   const opening=stateView.rollback(full,{...evidence(),activity:idle})
   assert.ok(opening.failureTarget,JSON.stringify({reason:opening.failureCleanupReason,inspect:inspectNativeFailureTail(full,{...evidence(),activity:idle},full._storageRevision)}));assert.equal(opening.failureTarget.turn,7)
@@ -76,16 +80,20 @@ test('易变清理链：真实SQL状态经缓存和脏投影保持7目标，静�
   const button=renderRealMenu(reused);assert.equal(button.props.disabled,false);assert.equal(button.children.join(''),'清除未完成回复');assert.equal(typeof button.props.onClick,'function')
   const dirty=await hostContext.api.projectDirtySessionView({...state,mode:'card'}, {...opening,tavernHelper:{messages:[]}},new Set([1]),idle,{layoutChanged:false})
   assert.equal(dirty.failureTarget.turn,7);assert.equal(dirty.canRollback,true);assert.equal(proofs,2)
-  busy=true;assert.equal((await hostContext.api.projectCachedSessionView(state,opening,idle)).failureTarget,null)
-  busy=false;assert.equal((await hostContext.api.projectCachedSessionView(state,opening,{phase:'pending',busy:false})).failureTarget,null)
+  busy=true;assert.equal((await hostContext.api.projectCachedSessionView(state,opening,idle)).failureTarget.turn,7,'前台忙不再取消签出')
+  busy=false;assert.equal((await hostContext.api.projectCachedSessionView(state,opening,{phase:'pending',busy:false})).failureTarget.turn,7,'后台 pending 不再取消签出')
   native[4].data.message.content.push({type:'tool-call'});const rejected=await hostContext.api.projectCachedSessionView(state,opening,idle)
-  assert.equal(rejected.failureTarget,null);assert.match(rejected.failureCleanupReason,/工具调用/)
+  assert.equal(rejected.failureTarget.turn,7,'工具调用不作签出资格');assert.equal(rejected.failureCleanupReason,'')
   native=events()
   await store.update(full.id,current=>({...current,_storageRevision:current._storageRevision+1,runtimeInputs:{7:{turn:7,payload:'不可随投影带出'}},foregroundError:{turn:7,payload:'不可带出'}}))
   const partial=await store.readSessionState(full.id,{scoped:true})
   assert.equal(partial.runtimeInputs['7'].turn,7);assert.equal(partial.runtimeInputs['7'].payload,undefined);assert.equal(partial.foregroundError.payload,undefined)
   const refused=await hostContext.api.projectCachedSessionView(partial,opening,idle)
-  assert.equal(refused.failureTarget,null);assert.match(refused.failureCleanupReason,/部分业务推进/)
-  assert.equal(applyLatestFailureHostTransform(host),host);assert.equal(applyLatestFailureViewTransform(view),view)
+  // 分层：最终 overlay 无可执行 target 时可静默（不展示旧错误分类），但这不代表签名依据消失。
+  assert.equal(refused.failureTarget,null);assert.equal(refused.failureCleanupReason,'','无可执行 target 时 view 不展示旧 reason（可接受结果）')
+  const inspected=inspectNativeFailureTail(partial,{...evidence(),activity:idle},partial._storageRevision)
+  assert.equal(inspected.target,null,'owned runtime（runtimeInputs/foregroundError）缺发轮前基准仍必须拒绝签出')
+  assert.match(String(inspected.reason||''),/本档运行写入[\s\S]*缺发轮前基准/,'真实 inspector 必须给出 owned-runtime 缺基准原因（guard 未削弱）')
+  assert.equal(applyLatestFailureHostTransform(host),host);assert.equal(applyLatestSendViewTransform(view),view,'最后一层是 latest-send overlay：幂等必须用它校验，不能拿旧 failure transform 复验')
  } finally {store.dispose();rmSync(root,{recursive:true,force:true})}
 })

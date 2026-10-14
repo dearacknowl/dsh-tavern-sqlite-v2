@@ -106,11 +106,37 @@ window.__ModuleLoader__.load({
      */
     function targetCompare(ft, cft) {
       if (!ft || !cft || typeof ft !== 'object' || typeof cft !== 'object') return '目标缺失'
-      const kindOf = value => (value === 'native-only' ? 'native-only' : (value === undefined || value === 'body' ? 'body' : null))
+      const kindOf = value => (value === 'rollback' ? 'rollback' : (value === 'native-only' ? 'native-only' : (value === undefined || value === 'body' ? 'body' : null)))
       const ftKind = kindOf(ft.kind)
       const cftKind = kindOf(cft.kind)
       if (ftKind === null || cftKind === null || ftKind !== cftKind) return 'kind 不一致'
       if (!Number.isSafeInteger(cft.turn) || Number(cft.turn) !== Number(ft.turn)) return 'turn 不一致'
+      if (ftKind === 'rollback') {
+        // 统一目标（kind: 'rollback'）：身份必须齐备且一致（缺字段即拒，绝不"仅双方都给才比"）；
+        // nativeAnchor 可选，但一侧有另一侧无必须拒；reply 允许 null。
+        for (const field of ['chatId', 'sessionId', 'branchId']) {
+          if (typeof ft[field] !== 'string' || ft[field] === '' || cft[field] !== ft[field]) return field + ' 不一致'
+        }
+        if (!Number.isSafeInteger(ft.revision) || !Number.isSafeInteger(cft.revision) || Number(cft.revision) !== Number(ft.revision)) return 'revision 不一致'
+        const ftOp = ft.operationId === undefined ? null : ft.operationId
+        const cftOp = cft.operationId === undefined ? null : cft.operationId
+        if (ftOp !== cftOp) return 'operationId 不一致'
+        if (ftOp !== null && (typeof ftOp !== 'string' || ftOp === '')) return 'operationId 不合法'
+        const ftAnchor = ft.nativeAnchor === undefined ? null : ft.nativeAnchor
+        const cftAnchor = cft.nativeAnchor === undefined ? null : cft.nativeAnchor
+        if ((ftAnchor === null) !== (cftAnchor === null)) return 'nativeAnchor 一侧缺失'
+        if (ftAnchor !== null) {
+          if (typeof ftAnchor !== 'object' || typeof cftAnchor !== 'object') return 'nativeAnchor 形状不合法'
+          if (!Number.isSafeInteger(ftAnchor.turn) || !Number.isSafeInteger(ftAnchor.input)
+            || !Number.isSafeInteger(cftAnchor.turn) || !Number.isSafeInteger(cftAnchor.input)) return 'nativeAnchor 坐标不合法'
+          for (const field of ['turn', 'input', 'reply']) {
+            const left = ftAnchor[field] === undefined ? null : ftAnchor[field]
+            const right = cftAnchor[field] === undefined ? null : cftAnchor[field]
+            if (left !== right) return 'nativeAnchor.' + field + ' 不一致'
+          }
+        }
+        return ''
+      }
       if (typeof ft.branchId !== 'string' || ft.branchId === '' || cft.branchId !== ft.branchId) return 'branchId 不一致'
       if (!Number.isSafeInteger(cft.revision) || !Number.isSafeInteger(ft.revision) || Number(cft.revision) !== Number(ft.revision)) return 'revision 不一致'
       if ((ft.incomplete === true) !== (cft.incomplete === true)) return 'incomplete 不一致'
@@ -404,14 +430,15 @@ window.__ModuleLoader__.load({
         () => (ui && typeof ui.readFailureTarget === 'function' ? ui.readFailureTarget(handle) : null),
         [ui, handle, snapshot])
       const running = props.useSession ? Boolean(props.useSession(snap => snap && snap.running)) : false
-      // activity 直接取作者同一选择里的字段（不猜、不另读）：前台在跑、或后台任何 role 的 pending/running 期间都不显示清理条。
+      // 活动信息仍订阅作者同一选择，但不把前后台状态当撤销资格。
       const activity = snapshot && snapshot.view && snapshot.view.activity ? snapshot.view.activity : null
       const settlementActive = Boolean(activity) && activity.role === 'settlement'
         && (activity.phase === 'pending' || activity.phase === 'running')
-      // 用户合同：只有前台与后台**都停**才显示；pending 的 durable 结算（busy 可能为 false）同样不得提前弹。
+      // 用户决定是否撤销；取消与持久任务收口由后端编排处理。
       const activityActive = Boolean(activity)
         && (activity.busy === true || activity.phase === 'pending' || activity.phase === 'running')
-      const blocked = running || settlementActive || activityActive
+      // 活动状态不决定撤销资格；统一执行端先取消并收口，按钮只防自身重复操作。
+      const blocked = false
       // 同组件内互斥用 ref（不触发额外 render，也不因 React strict 双挂载而漏防重入）。
       const inFlight = React.useRef(false)
       const [busy, setBusy] = React.useState(false)
@@ -419,7 +446,7 @@ window.__ModuleLoader__.load({
       const mounted = React.useRef(false)
       React.useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
       if (!ui || !handle || !current) return null
-      // 前后台任一在跑/挂起 ⇒ 不显示清理条（连禁用按钮都不给，避免误点与误判）。
+      // 活动轮同样显示撤销；互斥仅针对同一按钮在途调用。
       if (blocked) return null
       const onClick = async () => {
         if (inFlight.current || blocked || !ui.active) return
@@ -437,16 +464,15 @@ window.__ModuleLoader__.load({
       }
       return h('div', { className: 'dsh-sqlite-save__failure-strip', role: 'status' },
         h('span', { className: 'dsh-sqlite-save__failure-text' },
-          '当前失败轮：第 ' + current.turn + ' 轮未完成' + (current.reason ? '（' + current.reason + '）' : '')),
+          '最新发送：第 ' + current.turn + ' 轮' + (current.reason ? '（' + current.reason + '）' : '')),
         h('button', {
           className: 'dsh-tavern-btn dsh-sqlite-save__button dsh-sqlite-save__failure-clean',
           type: 'button', disabled: busy || blocked,
-          title: settlementActive ? '正文正在后台结算，稍后可清理'
-            : (running ? '当前会话仍在运行，稍后可清理' : '干净清理这一轮失败（物理删除未完成尾部）'),
+          title: '撤销最新一次发送；如仍在运行，将先停止并等待写入收口',
           onClick,
         },
         TrashIcon ? h('span', { className: 'dsh-sqlite-save__icon', 'aria-hidden': 'true' }, h(TrashIcon, { size: 16 })) : null,
-        busy ? '清理中…' : '干净清理本轮'),
+        busy ? '撤销中…' : '撤销最新发送'),
         error ? h('span', { className: 'dsh-sqlite-save__error', role: 'alert' }, error) : null)
     }
 
@@ -486,14 +512,7 @@ window.__ModuleLoader__.load({
           decorateFailureHandle(handle) {
             if (!handle || typeof handle.getSnapshot !== 'function') return null
             if (typeof handle.getTarget === 'function') return handle
-            handle.getTarget = () => {
-              const snap = handle.getSnapshot()
-              const live = snap && snap.view ? snap.view : null
-              const target = (live && live.failureTarget) || null
-              const turn = Number(target && target.turn)
-              if (!Number.isSafeInteger(turn) || turn < 1) return null
-              return { turn, reason: String((live && live.failureCleanupReason) || ''), target }
-            }
+            handle.getTarget = () => ui.readFailureTarget(handle)
             return handle
           },
           /** 从 stable handle 读当前 canonical 失败目标（无状态/无目标 ⇒ null，正常态不占位）。 */
@@ -502,9 +521,12 @@ window.__ModuleLoader__.load({
             const snap = handle.getSnapshot()
             const live = snap && snap.view ? snap.view : null
             const target = (live && live.failureTarget) || null
-            const turn = Number(target && target.turn)
+            // 统一入口：视图给出的 rollbackTarget（kind: 'rollback'）优先；旧 native-only failureTarget 仅作 legacy 回落。
+            const unified = live && live.rollbackTarget && live.rollbackTarget.kind === 'rollback' ? live.rollbackTarget : null
+            const chosen = unified || target
+            const turn = Number(chosen && chosen.turn)
             if (!Number.isSafeInteger(turn) || turn < 1) return null
-            return { turn, reason: String((live && live.failureCleanupReason) || ''), target }
+            return { turn, reason: String((live && live.failureCleanupReason) || ''), target: chosen, unified: unified !== null }
           },
           /** 兼容旧调用：订阅作者 live view 的同一选择（内部用 stable handle）。 */
           subscribeFailure(sessionId, notify) {
@@ -541,21 +563,29 @@ window.__ModuleLoader__.load({
             const staleReason = targetCompare(ft, liveTarget)
             if (staleReason !== '') throw new Error('清理目标已过期（与当前视图不一致），拒绝清理：' + staleReason)
             if ((ft.rollbackId || null) !== (liveTarget.rollbackId || null)) throw new Error('清理目标已过期（重试身份不一致），拒绝清理')
-            // 执行前再核一次静止（同一快照语义）：前台 session 仍在跑或后台活动 pending/running ⇒ 拒绝，绝不抢先清理。
+            // 新旧凭据都由执行端取消收口，不在视图侧按活动或错误分类阻止用户选择。
+            const unifiedTarget = !!(ft && ft.kind === 'rollback')
             const liveActivity = handle.getSnapshot && handle.getSnapshot() && handle.getSnapshot().view
               ? handle.getSnapshot().view.activity : null
-            if (liveActivity && (liveActivity.busy === true || liveActivity.phase === 'pending' || liveActivity.phase === 'running')) {
-              throw new Error('当前会话前台或后台仍在活动，稍后再清理，拒绝清理')
-            }
             if (!sessionsRef || typeof sessionsRef.waitForTavernRollbackSync !== 'function') {
               throw new Error('回退同步尚未接线或尚未就绪，未执行清理')
             }
-            const resp = await view.request('rollbackTurn', { expectedTurn: Number(turn), failureTarget: ft }, owner)
+            // 统一目标按 expectedTurn=ft 发送且**不带** failureTarget（否则与 clean 入口身份冲突）；legacy 保持原样。
+            const resp = unifiedTarget
+              ? await view.request('rollbackTurn', { expectedTurn: ft }, owner)
+              : await view.request('rollbackTurn', { expectedTurn: Number(turn), failureTarget: ft }, owner)
             const rb = resp && resp.view && resp.view.rolledBack
-            if (!rb || !rb.cleanedFailureTarget) throw new Error('清理未确认目标失败轮，不更新本地状态')
-            const targetMismatch = targetCompare(ft, rb.cleanedFailureTarget)
-            if (targetMismatch !== '') throw new Error('清理回执目标与请求不一致，拒绝更新：' + targetMismatch)
-            if (rb.alreadyClean !== true) await sessionsRef.waitForTavernRollbackSync(rb.sync)
+            if (unifiedTarget) {
+              if (!rb) throw new Error('统一回退未返回同步凭据，不更新本地状态')
+              // 同步凭据硬必须：缺 rb.sync 一律拒绝（绝不静默跳过等待，避免"库已删、页面未知"）。
+              if (rb.sync === undefined || rb.sync === null) throw new Error('统一回退缺少同步凭据（rolledBack.sync），拒绝更新本地状态')
+              if (rb.alreadyClean !== true) await sessionsRef.waitForTavernRollbackSync(rb.sync)
+            } else {
+              if (!rb || !rb.cleanedFailureTarget) throw new Error('清理未确认目标失败轮，不更新本地状态')
+              const targetMismatch = targetCompare(ft, rb.cleanedFailureTarget)
+              if (targetMismatch !== '') throw new Error('清理回执目标与请求不一致，拒绝更新：' + targetMismatch)
+              if (rb.alreadyClean !== true) await sessionsRef.waitForTavernRollbackSync(rb.sync)
+            }
             // 卸载后不得再触发新插件代的 refresh；回执仍照常返回给调用方判定。
             if (!active) return resp
             view.refresh(owner)

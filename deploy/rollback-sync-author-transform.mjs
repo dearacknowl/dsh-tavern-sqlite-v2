@@ -130,12 +130,34 @@ function recoverOrdinaryAction(source) {
                     ${anchor}`
  return applyRollbackRetryState(source.slice(0,start)+once(block,anchor,next)+source.slice(end))
 }
+// 统一目标（kind:'rollback'）下的普通回退忙资格放开：running/busy/settlement 不再禁止点击，
+// 执行端会先取消在途发送再走物理纯尾；regen（重新生成）与编辑正文的 gate 一律不动。
+const BUSY_MARKER='// [dsh-tavern-unified-rollback-busy-relax:v1]'
+const BUSY_BLOCKED_OLD='\t\t\tconst blocked = rolling || frontRunning || regenBusy || activity.busy || settlementActive;'
+const BUSY_BLOCKED_NEW=`\t\t\t${BUSY_MARKER}
+\t\t\tconst signedUnifiedTarget = !!(rollbackViewState.view && rollbackViewState.view.rollbackTarget && rollbackViewState.view.rollbackTarget.kind === 'rollback')
+\t\t\tconst blocked = rolling || regenBusy || (!signedUnifiedTarget && (frontRunning || activity.busy || settlementActive));`
+const BUSY_TITLE_OLD='disabled: blocked, title: blocked ? "请等待当前生成或后台处理完成后再回退" : clearIncomplete ?'
+const BUSY_TITLE_NEW='disabled: blocked, title: blocked ? "请等待当前生成或后台处理完成后再回退" : signedUnifiedTarget && (frontRunning || activity.busy || settlementActive) ? "将先停止当前发送，再回退到这条消息之前" : clearIncomplete ?'
+export function applyUnifiedRollbackBusyRelax(source){
+ if(source.includes(BUSY_MARKER)){
+  if(source.split(BUSY_MARKER).length!==2 || !source.includes('const signedUnifiedTarget =') || !source.includes('将先停止当前发送'))
+   throw Error('统一回退忙资格放开不完整')
+  return source
+ }
+ if(!source.includes(BUSY_BLOCKED_OLD))return source
+ let out=once(source,BUSY_BLOCKED_OLD,BUSY_BLOCKED_NEW,'普通回退忙资格行锚点缺失/不唯一')
+ // 提示行可能已被上一代补过（marker 缺失但已接线）⇒ 仅在旧锚点仍在时替换，最终仍必须含新提示。
+ if(out.includes(BUSY_TITLE_OLD))out=once(out,BUSY_TITLE_OLD,BUSY_TITLE_NEW,'普通回退按钮提示锚点缺失/不唯一')
+ if(!out.includes('将先停止当前发送'))throw Error('统一回退忙资格放开不完整：按钮提示未接线')
+ return out
+}
 export function applyAuthorRollbackActionTransform(source){
  if(source.includes(MARKER)){
   if(source.split(MARKER).length!==2 || !source.includes('await props.sessions.waitForTavernRollbackSync(result?.view?.rolledBack?.sync);')
     || !source.includes('typeof props.sessions?.waitForTavernRollbackSync !== "function"')
     || source.includes('// [dsh-tavern-core-client-resync:v1]'))throw Error('同连接回退按钮消费者不完整')
-  return recoverOrdinaryAction(source)
+  return applyUnifiedRollbackBusyRelax(recoverOrdinaryAction(source))
  }
  const start=source.indexOf('async function rollback()',source.indexOf('function TavernRollbackAction(props)')),end=source.indexOf('if (!canRollback) {',start)
  if(start<0 || end<start)throw Error('回退同步callback边界漂移')
@@ -143,7 +165,7 @@ export function applyAuthorRollbackActionTransform(source){
  callback=once(callback,'historyProjection.rolledBack(props.sessionId, result && result.view);',NEXT)
  callback=once(callback,'notifyTavernDataChanged(["sessions"], "play-controls");','// 同连接push只定向通知本档。')
  callback=once(callback,'setRolling(false); liveTavernView.invalidate(props.sessionId); tavernCoordination.invalidate(props.sessionId);','setRolling(false);')
- return recoverOrdinaryAction(source.slice(0,start)+callback+source.slice(end))
+ return applyUnifiedRollbackBusyRelax(recoverOrdinaryAction(source.slice(0,start)+callback+source.slice(end)))
 }
 export function applyAuthorRollbackRuntimeTransform(source){
  const marker='// [dsh-tavern-rollback-sync-runtime:v1]'

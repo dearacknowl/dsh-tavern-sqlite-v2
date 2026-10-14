@@ -1,6 +1,7 @@
 // 定向回归：原档可读但所有写入口只读；显式分叉必须使用新 ID 的 SQLite 档。
 // 只用 Node 内置：node test/store-legacy-read.test.mjs
 import assert from 'node:assert/strict'
+import test from 'node:test'
 import { DatabaseSync } from 'node:sqlite'
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync, readdirSync } from 'node:fs'
 import os from 'node:os'
@@ -41,6 +42,8 @@ function snapshot(directory, relative = '') {
 
 const root = mkdtempSync(path.join(os.tmpdir(), 'tavern-legacy-read-'))
 const stores = []
+// 顶层断言脚本：原 full 在“第二个 store 注册”处抛模块级首错，其后断言无证据；现包具名叶（断言/顺序/cleanup 零改动）。
+test('原全量模块失败：旧存储读取第二store后断言', async () => {
 const writableIds = []
 try {
   const chatsRoot = path.join(root, 'chats')
@@ -237,5 +240,6 @@ try {
   }
   rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 })
 }
+})
 
 console.log('store-legacy-read：原件可读、全部写入口只读、shadow拒写、新ID/fork SQLite可写、原件字节完整保留通过')

@@ -1,5 +1,8 @@
-// 发送准备期只检测失败尾；物理清理由已有统一回退入口执行，不能停正在prepare的Agent。
-const MARKER='// [dsh-tavern-failure-input-guard:v1]'
+// 发送准备期必须先收口上轮错误/未确认完成的发送；清理走统一 latest-send 目标，不按终态或输出形态分类。
+// 真实前像、身份/CAS、纯尾和引用护栏仍由 latest-send/cleanRollback 执行端负责；本接缝不软清、不软墓碑、不自动删除用户输入。
+const MARKER='// [dsh-tavern-failure-input-guard:v2]'
+const INPUT_IMPORT="import { assertSendAfterCleanup } from './domain/storage-failure-state.js'\n"
+const LEGACY_INPUT_IMPORT="import { ledgerFailureState as inputFailureState } from './domain/storage-failure-state.js'\n"
 const ORIGINAL=`    clearFailedTurns: async function (sessionId) {
       const mode = await turnOrchestrator.modeFor(sessionId)
       if (mode !== 'story' && mode !== 'script') return 0
@@ -13,8 +16,35 @@ const ORIGINAL=`    clearFailedTurns: async function (sessionId) {
       else if (!availability.canRollback && availability.reason && /失败回合/.test(availability.reason)) console.warn('dsh-tavern: 上一次失败回合的残留无法清理，本轮请求可能带上它:', availability.reason)
       return cleared
     },`
+const LEGACY_V2_REPLACEMENT=`    clearFailedTurns: async function (sessionId) {
+      ${MARKER}
+      const mode = await turnOrchestrator.modeFor(sessionId)
+      if (mode !== 'story' && mode !== 'script') return 0
+      const session = sessionStore.get(sessionId) || agentRegistry.get(sessionId)?.session
+      const chat = session && await chatForSession(sessionId)
+      if (!chat) return 0
+      const ledger = inputFailureState(chat)
+       const activeBody = Object.values(chat.timeline?.operations || {}).some(op => op?.kind === 'body' && op.status === 'running')
+       if (ledger?.pendingCleanupTurns?.length || activeBody) throw new Error('上轮错误发送尚未清理：请先执行统一回退或清理，再继续发送')
+       if (chat.rollbackPending) throw new Error('物理回退未完成：请先完成或取消本次回退，再继续发送')
+       const tail = sessionEvents(session).findLast(event => event?.type === 'turn/end')
+       if (tail && tail.data?.reason?.kind && tail.data.reason.kind !== 'completed') throw new Error('上轮错误发送尚未清理：请先执行统一回退或清理，再继续发送')
+      return 0
+    },`
 const REPLACEMENT=`    clearFailedTurns: async function (sessionId) {
       ${MARKER}
+      const mode = await turnOrchestrator.modeFor(sessionId)
+      if (mode !== 'story' && mode !== 'script') return 0
+      const session = sessionStore.get(sessionId) || agentRegistry.get(sessionId)?.session
+      const chat = session && await chatForSession(sessionId)
+      if (!chat) return 0
+      assertSendAfterCleanup(chat, { events: sessionEvents(session) })
+      return 0
+    },`
+// 旧代（v1）就地升级：统一到同一条先清理守卫；不恢复终态或输出白名单。
+const V1_MARKER='// [dsh-tavern-failure-input-guard:v1]'
+const V1_REPLACEMENT=`    clearFailedTurns: async function (sessionId) {
+      ${V1_MARKER}
       const mode = await turnOrchestrator.modeFor(sessionId)
       if (mode !== 'story' && mode !== 'script') return 0
       const session = sessionStore.get(sessionId) || agentRegistry.get(sessionId)?.session
@@ -39,12 +69,26 @@ export function applyTemplateRollbackInputOrderTransform(source) {
  if(source.split(capture).length!==2)throw Error('模板撤销与业务基准接缝未命中/不唯一')
  return source.replace(capture,`    ${marker}\n    if (chat.promptTemplateInput && chat.promptTemplateInput.turn !== turn) restoreTemplateInput(chat)\n${capture}`)
 }
+// 供定向测试构造「旧代 v1 产物」与「原始作者源」（形态常量本身即接缝合同的一部分）。
+export const FAILURE_INPUT_FORMS = Object.freeze({ MARKER, ORIGINAL, REPLACEMENT, V1_MARKER, V1_REPLACEMENT })
 export function applyUpstreamFailureInputTransform(source) {
+  if(source.includes(LEGACY_V2_REPLACEMENT))source=source.replace(LEGACY_V2_REPLACEMENT,REPLACEMENT)
+  if(source.includes(LEGACY_INPUT_IMPORT))source=source.replace(LEGACY_INPUT_IMPORT,INPUT_IMPORT)
  if(source.includes(MARKER)){
-  if(!source.includes('ledger.pendingCleanupTurns.length') || !source.includes('return 0') || source.includes('cleared += clearFailedTurnSurface'))throw Error('失败输入接缝标记存在但消费者不完整')
-  return source
+  // 只核 clearFailedTurns **本体**：整个源文件里可能仍有其它消费者（导入、注释、别的接缝），不得因此整体拒绝。
+  const start=source.indexOf('    clearFailedTurns: async function (sessionId) {')
+  const end=start<0?-1:source.indexOf('\n    },',start)
+  const region=start>=0&&end>start?source.slice(start,end):''
+  if(!region.includes('assertSendAfterCleanup(chat, { events: sessionEvents(session) })') || region.includes('clearFailedTurnSurface') || region.includes('unclearedTurns'))throw Error('失败输入接缝消费者不完整（先清理守卫缺失）')
+  return source.includes(INPUT_IMPORT) ? source : INPUT_IMPORT + source
+ }
+ if(source.includes(V1_MARKER)){
+  if(source.split(V1_REPLACEMENT).length!==2)throw Error('失败输入接缝 v1 升级锚点未命中/不唯一')
+  const next=source.replace(V1_REPLACEMENT,REPLACEMENT)
+   return next.includes(INPUT_IMPORT.trim()) ? next : INPUT_IMPORT + next
  }
  if(!source.includes('    clearFailedTurns: async function (sessionId) {'))return source
  if(source.split(ORIGINAL).length!==2)throw Error('新增失败输入接缝未命中/不唯一')
- return "import { ledgerFailureState as inputFailureState } from './domain/storage-failure-state.js'\n"+source.replace(ORIGINAL,REPLACEMENT)
+ const next=source.replace(ORIGINAL,REPLACEMENT)
+  return next.includes(INPUT_IMPORT.trim()) ? next : INPUT_IMPORT + next
 }

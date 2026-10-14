@@ -178,21 +178,27 @@ test('inspectNativeFailureTail：有前轮失败 body ⇒ 越过触发条件判�
   assert.equal(result.target.turn, 113)
 })
 
-test('inspectNativeFailureTail：没有前轮失败 body ⇒ 仍被"缺少触发条件"挡住', () => {
+test('inspectNativeFailureTail：前轮 completed body 不决定最新无业务原生轮 ⇒ 真实最新 frame 可签 113', () => {
   const chat = chatForNativeTail({ body112Status: 'completed' })
   assert.deepEqual([...ledgerFailureState(chat).ledgerFailed], [], '前提：账本里没有任何失败 body')
   const result = inspectNativeFailureTail(chat, { session: { header: { id: 'session-1' } }, events: guardNativeTail })
-  assert.equal(result?.target ?? null, null, '不得给出 target')
-  assert.match(String(result?.reason || ''), /缺少触发正文准备守卫的前轮失败操作/)
+  assert.equal(result?.target?.kind, 'native-only', '前轮 completed 不构成挡签资格；reason=' + String(result?.reason))
+  assert.equal(result.target.turn, 113)
+  assert.equal(result.target.chatId, chat.id)
+  assert.equal(result.target.sessionId, chat.sessionId)
+  assert.equal(result.target.branchId, chat.timeline.branchId, '签的必须是真实最新 frame 的归属')
+  assert.equal(result.target.revision, chat._storageRevision)
 })
 
-test('inspectNativeFailureTail：前轮失败 body 属其它分支 ⇒ 同样挡住（与守卫同分支归属判据）', () => {
+test('inspectNativeFailureTail：前轮失败 body 属其它分支不决定最新轮 ⇒ 仍按最新 frame 签 113', () => {
   const chat = chatForNativeTail({ body112Status: 'failed' })
   chat.timeline.branchId = 'branch-new'
   assert.deepEqual([...ledgerFailureState(chat).ledgerFailed], [], '旧分支的失败不属于新分支')
   const result = inspectNativeFailureTail(chat, { session: { header: { id: 'session-1' } }, events: guardNativeTail })
-  assert.equal(result?.target ?? null, null)
-  assert.match(String(result?.reason || ''), /缺少触发正文准备守卫的前轮失败操作/)
+  assert.equal(result?.target?.kind, 'native-only', '旧分支失败 body 不得成为挡签资格；reason=' + String(result?.reason))
+  assert.equal(result.target.turn, 113)
+  assert.equal(result.target.branchId, 'branch-new', '签的必须是当前最新分支，而不是旧 body 的 branch-old 归属')
+  assert.equal(result.target.revision, chat._storageRevision)
 })
 
 // ---------- ④ sessionTailState：与 sessionTurnTail 语义一致 ----------

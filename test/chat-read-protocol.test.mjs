@@ -8,6 +8,7 @@
 //
 // 只用 node 内置：node test/chat-read-protocol.test.mjs
 import assert from 'node:assert/strict'
+import test from 'node:test'
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -106,6 +107,9 @@ const root = mkdtempSync(path.join(os.tmpdir(), 'tavern-chat-read-protocol-'))
 const chatsRoot = path.join(root, 'chats')
 mkdirSync(chatsRoot, { recursive: true })
 const stores = []
+// 本文件原为顶层断言脚本：原全量在“第二个 store 注册”处抛模块级首错，gate 只能记文件级失败、其后续断言无证据。
+// 现包一层具名叶（断言/执行顺序/finally cleanup 零改动），使该失败及后续断言都能被 --name 精确定向。
+test('原全量模块失败：Chat读取协议第二store注册后断言', async () => {
 try {
   const chatId = CHAT.id
   const legacyId = 'chat-legacy-window'
@@ -273,3 +277,4 @@ try {
   }
   rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 })
 }
+})

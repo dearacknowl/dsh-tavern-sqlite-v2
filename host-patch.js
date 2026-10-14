@@ -13,6 +13,7 @@ import { claimHostSessionPatch } from './lib/domain/host-session-patch.js'
 import { installSharedHostSessionPatch } from './lib/host-session-install.js'
 import { installRollbackSync } from './lib/rollback-sync.js'
 import { isLegacySession, UNMIGRATED_MESSAGE } from './lib/tavern-chat-state.js'
+import { installSendAcceptance } from './lib/send-acceptance.js'
 
 export const inject = ['sessionController', 'sessionPersistence', 'sessionQuery']
 
@@ -94,11 +95,17 @@ export async function apply(ctx, config = {}) {
   // 安装走共享入口：作者树那条 entry 也调它（部署缝改造后），两边拿到**同一个真实句柄**，
   // 谁先到谁安装、后到者 await 同一 promise；claim 不 ok 时如实复用既有句柄。
   const handle = await installSharedHostSessionPatch({ ctx, config, claim })
+  let removeSendAcceptance
+  if (handle.serverReady) {
+    // 使用宿主同一Session类；下面统一按包装的逆序撤销，不能先还原native再卸acceptance。
+    const { Session } = await import('@deepseek-ai/dsh-session')
+    removeSendAcceptance=installSendAcceptance(Session)
+  }
   say('安装结果 status=' + handle.status + (handle.reason ? ' reason=' + handle.reason : ''))
   try {
     ctx.logger?.info?.('[dsh-tavern-sqlite-v2] 宿主会话补丁：' + handle.status + (handle.reason ? '（' + handle.reason + '）' : ''))
   } catch { /* 忽略 */ }
-  ctx.effect(() => () => { try { handle.dispose?.() } catch { /* 安装器已自行还原所改 */ } },
+  ctx.effect(() => () => { removeSendAcceptance?.(); try { handle.dispose?.() } catch { /* 安装器已自行还原所改 */ } },
     'dsh-tavern-sqlite-v2: dispose host session patch')
 
   // ⚠ 绝不 `return handle` —— cordis 把插件 `apply` 的**返回值当 effect 解释**

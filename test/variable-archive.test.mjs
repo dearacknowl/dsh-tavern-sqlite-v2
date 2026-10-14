@@ -12,6 +12,7 @@
 //
 // 只用 node 内置 + mkdtemp：不读真实存档、不碰远端、不读别的测试 fixture。
 import assert from 'node:assert/strict'
+import test from 'node:test'
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync } from 'node:fs'
 import { DatabaseSync } from 'node:sqlite'
 import os from 'node:os'
@@ -142,6 +143,8 @@ function openSide(chatId) {
   return db
 }
 
+// 顶层断言脚本：原 full 在“legacyStore 第二注册”处抛模块级首错，其后多 store/快照断言无证据；现包具名叶（断言/函数/setup/cleanup 零改动）。
+test('原全量模块失败：变量归档多store与后续快照断言', async () => {
 try {
   const store = openStore()
 
@@ -411,3 +414,4 @@ try {
   for (const instance of stores) { try { instance.dispose() } catch { /* 已释放 */ } }
   rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 })
 }
+})

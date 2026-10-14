@@ -19,13 +19,14 @@ Linux 安装只需定位目标、命中必需接缝、停止原运行实例后�
 
 ## 支持范围
 
-- **适配酒馆版本以对应 [Release 下载页面](https://github.com/huajiao1998/dsh-tavern-sqlite-v2/releases)更新说明为准。** 当前版本 **0.4.10：适配上游 main `537e878f882dbac8b651fba0f72ecb492a8a2b21`（简称 `537e878`，Tavern2.6.0；运行时 revision `8296b5b1` / sequence599，DSH SDK0.1.5-rc.2；兼容 0.4.9 基线 `91963734` 安装）**。
+- **适配酒馆版本以对应 [Release 下载页面](https://github.com/huajiao1998/dsh-tavern-sqlite-v2/releases)更新说明为准。** 当前版本 **0.4.11：适配上游 main `537e878f882dbac8b651fba0f72ecb492a8a2b21`（简称 `537e878`，Tavern2.6.0；运行时 revision `8296b5b1` / sequence599，DSH SDK0.1.5-rc.2；兼容 0.4.9 基线 `91963734` 安装）**。
 - **其他未适配版本使用过程中可能出现运行错误。** 安装接入检查通过不代表运行期功能兼容；请更新到对应 Release 标注的适配酒馆版本，或自行适配本插件后使用。版本标注是兼容说明，不新增作者SHA、签名或纯净源码准入。
 
 - 支持 macOS、Linux、WSL2 CLI 与 Windows（桌面版 Electron、原生 Windows CLI）。运行能力和适配范围以 Release 说明为准；Linux 装卸不检查 DSH / boot 版本、Node VM 旗标或 SQLite / zstd 能力。
 - **Linux 接入**：全部必需接缝在当前源码唯一命中后直接注入；清单缺失/过时、用户改块外代码（不破坏接缝）均不影响安装。Windows / macOS 仍保留隔离预演及既有环境检查。
 - **发布状态**：现场注释区块装卸自 **0.3.8** 起已公开发布，机制说明见 [COMMENT-SEAMS.md](<COMMENT-SEAMS.md>)；旧机制（≤0.3.7）现场需先用旧版插件自带 CLI 完整卸载，再安装本版。
 - **0.4.9 延续 Linux / WSL2 直接维护流程、2.6场景slot与造型参考存档适配，并兼容最新main输入判定/漏写回合/回退恢复变更**；旧版附件不包含本次最新main适配，使用新能力须下载0.4.9或后续版本。同名插件换版本由统一维护命令清旧装配再安装，不作包字节比较。
+- **0.4.11**：最新一次发送的统一撤销——不论该次发送成功、报错、被中断、只留下部分产物或没有正文，都可由用户主动回退到发送前状态；发送前基准在原生轮开始前同步落库，撤销时先取消并收口在途写入再走既有物理纯尾，停止后仍可正常继续发送。不按错误类别或产物形态决定资格，不强制先清理，不自动删除失败输入。
 - **0.4.10（本地发包，未公开发布）**：安装入口单源——包内二入口与外部发行件由同一渲染器从模板＋获取器源＋当前 `package.json` 版本生成，包内 URL/SHA 保持占位以避免内嵌本次 tgz 摘要自引用；源码树 `install.sh` / `deploy/install.sh` 改为只读当前 manifest/bootstrap 的本地 wrapper；Linux 停服未确证且原进程仍活时不再代启第二份进程；公开 API 兼容与退役策略见 [PUBLIC-API-COMPATIBILITY.md](<../PUBLIC-API-COMPATIBILITY.md>)。本候选已完成按域的具名定向验证（IPC 原语与 runtime、变量、legacy/fork、ESM/Worker、安全、旧保留 API），**未跑全量、未做实机 Electron/页面验收、未发布或部署**。卸载口径限定为按现场完整注释区块撤除；半截区块、归属不明、双源装配明确拒绝，**不为本任务接线旧 residual 兜底分支**。
 - 运行依赖零 npm 外部依赖：`json5`、`jsonrepair`、`lodash`、`yaml` 与注释块词法器 `acorn`（8.15.0，MIT）均已 vendor 进包内，安装不联网补依赖。
 - 当前源码在各平台统一复制程序到酒馆标准数据插件目录，包内 peer 仍链接宿主同一物理实例；不再把本包加为 profile 依赖或 bundle，不调用包管理器装卸本包，不重装其它依赖、不联网补 SDK。
