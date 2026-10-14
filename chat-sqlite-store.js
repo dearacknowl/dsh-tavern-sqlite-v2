@@ -906,6 +906,7 @@ export function createChatSqliteStore(options = {}) {
       const produced = await updater(copyJsonTree(current))
       if (currentState && Number(handle(chatId).prepare('SELECT revision FROM archive_head WHERE id=1').get()?.revision)!==currentState.revision) throw new Error('Chat 存储写入 revision 非连续：异步更新期间发送前像或其他提交已推进，拒绝覆盖')
       if (produced === undefined) return copyJsonTree(current)
+      if (produced?.id !== chatId) throw new Error('Chat 存储身份与目标 chatId 不一致')
       assertCompleteChat(produced)
       // L1（2026-09-30）：脱离草稿用【结构化拷贝】而非 JSON 文本往返。
       //   copy-json-tree.js 的契约就是 "detach an already parsed JSON tree, sharing only immutable
