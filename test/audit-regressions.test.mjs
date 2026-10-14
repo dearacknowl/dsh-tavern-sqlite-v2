@@ -41,7 +41,7 @@ test('B03: every string page and preview preserves surrogate pairs', () => {
 })
 
 test('B04: one oversized escaped path fails explicitly rather than repeating a cursor', () => {
-  assert.throws(()=>readVariables(chatWith({['\u0001'.repeat(700)]:1})),/单个变量条目超过/)
+  assert.throws(()=>readVariables(chatWith({['\u0001'.repeat(700)]:1})),/单项超过4000字节/)
 })
 
 test('B05: large Base64 reaches database validation; malformed Base64 is rejected', async () => {
@@ -95,10 +95,10 @@ test('B10: mismatched IDs are rejected before first write and before updating an
   const open=()=>createChatSqliteStore({dataRoot,helpers})
   let store=open()
   try {
-    await assert.rejects(store.update('chat-a',()=>({id:'chat-b',messages:[],_storageRevision:1})),/身份/)
+    await assert.rejects(store.update('chat-a',()=>({id:'chat-b',messages:[],_storageRevision:1})),/chat\.id.*不一致/)
     assert.equal(existsSync(path.join(dataRoot,'chats','chat-a','archive.db')),false)
     await store.update('chat-a',()=>({id:'chat-a',sessionId:'session-a',messages:[],_storageRevision:1}))
-    await assert.rejects(store.update('chat-a',c=>({...c,id:'chat-b',_storageRevision:2})),/身份/)
+    await assert.rejects(store.update('chat-a',c=>({...c,id:'chat-b',_storageRevision:2})),/chat\.id.*不一致/)
     assert.equal((await store.read('chat-a')).id,'chat-a')
     store.dispose();store=open();assert.equal((await store.read('chat-a')).id,'chat-a')
   }finally{store.dispose()}

@@ -41,7 +41,7 @@ function fixture(t) {
   const tree = prepareCommentAuthorTree()
   if (!tree) return null // 唯一允许的 skip：完全没有真实作者源码来源
   t.after(() => tree.cleanup())
-  const prepared = { tree, source: sourceAccess(tree.appDir, adapter.targets), evidence: evidence() }
+  const prepared = { tree, source: sourceAccess(tree.appDir, adapter.targets, adapter.readSources), evidence: evidence() }
   t.after(() => fs.rmSync(prepared.evidence, { recursive: true, force: true }))
   assert.ok(prepared.source.text(INDEX) !== null, '真实 helper 必须提供作者入口：' + INDEX)
   assert.ok(prepared.source.text(OUTSIDE) !== null, '真实 helper 必须提供块外目标：' + OUTSIDE)

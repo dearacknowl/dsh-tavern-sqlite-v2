@@ -40,7 +40,7 @@ test('块CLI1 真实本地安装卸载路径不读旧作者资产', async t => {
   if (!tree) return t.skip('无真实作者 source fixture（DSH_TAVERN_TEST_APP 与本地 author-fixture 都不可用）')
   const evidence = evidenceDir()
   try {
-    const source = sourceAccess(tree.appDir, maintenanceAdapter.targets)
+    const source = sourceAccess(tree.appDir, maintenanceAdapter.targets, maintenanceAdapter.readSources)
     const install = shellDriver()
     const installed = await run('install', install.driver, source, evidence)
     assert.equal(installed.changed, true, '真实施缝必须产生变更')
@@ -70,7 +70,7 @@ test('块CLI2 启动验证失败只撤本次写集且保留第三方变更', asy
   if (!tree) return t.skip('无真实作者 source fixture（DSH_TAVERN_TEST_APP 与本地 author-fixture 都不可用）')
   const evidence = evidenceDir()
   try {
-    const source = sourceAccess(tree.appDir, maintenanceAdapter.targets)
+    const source = sourceAccess(tree.appDir, maintenanceAdapter.targets, maintenanceAdapter.readSources)
     const rels = maintenanceAdapter.targets.filter(rel => exists(tree.appDir, rel))
     const victim = rels.find(rel => rel.endsWith('.js'))
     const { driver } = shellDriver({
@@ -96,7 +96,7 @@ test('块CLI3 停止disposer撤块后安装重接与卸载幂等', async t => {
   if (!tree) return t.skip('无真实作者 source fixture（DSH_TAVERN_TEST_APP 与本地 author-fixture 都不可用）')
   const evidence = evidenceDir()
   try {
-    const source = sourceAccess(tree.appDir, maintenanceAdapter.targets)
+    const source = sourceAccess(tree.appDir, maintenanceAdapter.targets, maintenanceAdapter.readSources)
     await run('install', shellDriver().driver, source, evidence) // 前置：先真实装好（造出"已装"现场）
     // 运行中重接：stop 回调＝runtime disposer 真撤缝（删记录＋撤作者行），随后必须能按块记录重接
     const reapply = shellDriver({ wasRunning: true, onStop: () => { maintenanceAdapter.uninstallStandardSeams({ appDir: tree.appDir, assertStopped: () => true }) } })
