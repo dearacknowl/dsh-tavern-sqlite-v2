@@ -1669,8 +1669,9 @@ export function createChatSqliteStore(options = {}) {
       if (!existsSync(dbFile(id))) throw new Error('单楼命令：目标档不存在（无 archive.db）')
       const db = handle(id)
       if (db === null) throw new Error('单楼命令：拿不到库句柄')
-      // 叶子形态翻译：命令服务要"行内 patch 对象"，宿主给的是 patch changes；此处逐条应用。
-      const patch = {}
+      // 只移除目标楼前缀；保留 set/delete 的边界与顺序，整对象 set 不改成深合并。
+      if (changes !== undefined && !Array.isArray(changes)) throw new Error('单楼命令：changes 必须是数组')
+      const floorChanges = []
       for (const change of changes ?? []) {
         if (!change || !Array.isArray(change.path) || change.path[0] !== 'messages' || change.path[1] !== index) {
           throw new Error('单楼命令：changes 必须全部落在目标楼（messages/' + index + '）')
@@ -1678,41 +1679,31 @@ export function createChatSqliteStore(options = {}) {
         if (change.op === 'splice') throw new Error('单楼命令不接受数组 splice；数组长度变化请走作者 patch 兜底')
         const leaf = change.path.slice(2)
         if (leaf.length === 0) throw new Error('单楼命令：整楼替换请用追加命令的 splice 形态')
-        setPatchLeaf(patch, leaf, change.op === 'delete' ? undefined : change.value)
+        floorChanges.push({ ...change, path: leaf })
       }
-      const outcome = commandSetMessageFloor(db, { chatId: id, sessionId: metadata.sessionId, revision: expectedRevision, index, patch }, {
-        assertWritableChat, now, headerSets, rollbackMetadata:metadata,
-        archiveLocalWrite: (targetDb, targetChatId, touchedRows, messageCount, options) =>
-          variables.prepareLocalWrite(targetDb, targetChatId, touchedRows, messageCount, options),
-        applyMessageWrite: ({ revision, keys, messages, timeline, changes: committed }) => {
-          bumpGeneration(id)
-          const compRev = componentRevisions(db)
-          if (keys.length > 0) compRev.header++
-          if (messages) compRev.messages++
-          projectionReads.invalidate(id, { revision, keys, messages, timeline })
-          invalidateTimelineRows(db, timeline)
-          forgetState(id)
-        },
-      })
+      let outcome
+      try {
+        outcome = commandSetMessageFloor(db, { chatId: id, sessionId: metadata.sessionId, revision: expectedRevision, index, changes: floorChanges }, {
+          assertWritableChat, now, headerSets, rollbackMetadata:metadata,
+          archiveLocalWrite: (targetDb, targetChatId, touchedRows, messageCount, options) =>
+            variables.prepareLocalWrite(targetDb, targetChatId, touchedRows, messageCount, options),
+          applyMessageWrite: ({ revision, keys, messages, timeline, changes: committed }) => {
+            bumpGeneration(id)
+            const compRev = componentRevisions(db)
+            if (keys.length > 0) compRev.header++
+            if (messages) compRev.messages++
+            projectionReads.invalidate(id, { revision, keys, messages, timeline })
+            invalidateTimelineRows(db, timeline)
+            forgetState(id)
+          },
+        })
+      } catch (error) {
+        // prepareLocalWrite 已刷新热缓存时，SQL 回滚也必须撤销内存可见树。
+        variables.forget(id)
+        throw error
+      }
       return outcome === undefined ? undefined : { ...outcome, revision: outcome.revision }
     })
-  }
-
-  function setPatchLeaf(patch, leaf, value) {
-    let node = patch
-    for (let depth = 0; depth < leaf.length - 1; depth++) {
-      const part = leaf[depth]
-      if (typeof part !== 'string' && (!Number.isSafeInteger(part) || part < 0) || ['__proto__', 'prototype', 'constructor'].includes(part)) {
-        throw new Error('单楼命令：叶子路径含非法键 ' + String(part))
-      }
-      if (node[part] === undefined || node[part] === null || typeof node[part] !== 'object') node[part] = {}
-      node = node[part]
-    }
-    const last = leaf[leaf.length - 1]
-    if (typeof last !== 'string' && (!Number.isSafeInteger(last) || last < 0) || ['__proto__', 'prototype', 'constructor'].includes(last)) {
-      throw new Error('单楼命令：叶子路径含非法键 ' + String(last))
-    }
-    node[last] = value
   }
 
   /** 真身 native-conversation-storage.js:144-159 的数据库原生版（窗口是分页，不是可写 Chat）。 */
