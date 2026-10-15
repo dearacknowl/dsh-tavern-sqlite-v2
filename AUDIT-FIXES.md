@@ -1,6 +1,6 @@
 # 0.4.12 存储审查修复与验证
 
-基线：f40b973e6f43dcc5d6ebde732a97c5eb91037733（已合并 PR #17）。验证环境：Windows / Node.js v24.15.0，2026-10-14。
+基线：f40b973e6f43dcc5d6ebde732a97c5eb91037733（已合并 PR #17）。验证环境：Windows / Node.js v24.15.0，2026-10-15。
 
 ## 修复范围
 
@@ -14,17 +14,26 @@
 
 B11 已随 PR #17 合并，本次继续保留其缓存隔离及回归测试。B01、B02–B06、B08、B09 采用作者现有修复，不重复修改。B07 采用新版 rowid 排序契约。
 
+## 追加修复 B16–B19
+
+- B16：单楼命令与 patch 的显式 variables 删除意图传入归档层，同事务清理快照；普通 K4 缺字段保持原语义，删除后重新赋值以最终数组为准。
+- B17：局部修剪不再 hydrate 已归档冷楼，避免把不变历史树重新序列化、upsert 并重写消息。仍有历史原始行扫描，不宣称恒定时间。
+- B18：缺少 variable_state 时仅从幸存快照推导，不从已被 deleteFrom 清空的消息热树复活当前态。
+- B19：snapshotAt 使用 turn 索引查询及完整候选排序，避免部分热缓存抢先返回更早楼。代价是每次历史读取执行一次索引查询。
+
+追加 9 项回归覆盖冷/热楼、patch/单楼删除、删除后赋值、删除事务失败、消息写入计数、全部快照清空及同轮多楼冷热一致性。B16–B19 的四个复现均在改动前已确认失败。
+
 ## 回归验证
 
-新增 test/audit-store-regressions.test.mjs：13 项自含合成测试。最初的 11 项在本 PR 前序提交 da91ca0 上全部失败，修复后通过；另补充冷楼重新激活、旧 patch 入口和空 JSON 键的兼容覆盖。
+新增 test/audit-store-regressions.test.mjs：22 项自含合成测试。最初的 11 项在本 PR 前序提交 da91ca0 上全部失败，修复后通过；另补充冷楼重新激活、旧 patch 入口和空 JSON 键的兼容覆盖。
 
-下面 10 个测试文件合计 **48 tests / 48 pass / 0 fail**：
+下面 10 个测试文件合计 **57 tests / 57 pass / 0 fail**：
 
 ```shell
 node --experimental-vm-modules --test test/audit-store-regressions.test.mjs test/audit-regressions.test.mjs test/variable-snapshot-cache.test.mjs test/variable-archive.test.mjs test/variable-query-sqlite-compat.test.mjs test/esm-module-loader.test.mjs test/db-save-identities.test.mjs test/db-save-exchange.test.mjs test/worldbook-recall-store.test.mjs test/worldbook-recall-sql-read.test.mjs
 ```
 
-作者原有 test/audit-storage-fixes.test.mjs 另 **10 pass / 0 fail**，包含局部截断、物理回退、保留未触碰热项、helper 冷树回拨、稀疏分页和当前态回收。因此本轮 58 项定向测试通过。该文件硬编码将合成夹具写到仓库外 tmp/gate-fixtures-audit-storage，本机授予该定向测试写入权限后执行；未改其测试源码。
+作者原有 test/audit-storage-fixes.test.mjs 另 **10 pass / 0 fail**，包含局部截断、物理回退、保留未触碰热项、helper 冷树回拨、稀疏分页和当前态回收。因此本轮 67 项定向测试通过。该文件硬编码将合成夹具写到仓库外 tmp/gate-fixtures-audit-storage，本机授予该定向测试写入权限后执行；未改其测试源码。
 
 git diff --check 与三个修改源码文件的 node --check 均通过。
 

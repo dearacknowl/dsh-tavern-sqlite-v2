@@ -460,7 +460,10 @@ export function createChatSqliteStore(options = {}) {
       // ---- 变量（同一事务）：变化楼落快照 + 当前态 + 尾部清残 + K4 修剪（窗口外老楼先存快照再删）----
       //   header-only 写（touchedIndices 空且无截断）在这里不做任何扫描，直接原样返回。
       //   written = 本次 touched ∪ 被修剪的楼：修剪改了行内容，必须一起落库。
-      const prepared = variables.prepareWrite(db, chatId, chat, { touched: touchedIndices, truncated })
+      const deletedVariables = (changes || []).filter(change => change.path?.length === 3
+        && change.path[0] === 'messages' && change.path[2] === 'variables' && change.op === 'delete')
+        .map(change => change.path[1])
+      const prepared = variables.prepareWrite(db, chatId, chat, { touched: touchedIndices, truncated, deletedVariables })
       const storedChat = prepared.chat
       const storedMessages = Array.isArray(storedChat.messages) ? storedChat.messages : messages
       // prepareWrite只在修剪时替换自有楼对象；仅在实际written楼内补内部变化，不比较整档。

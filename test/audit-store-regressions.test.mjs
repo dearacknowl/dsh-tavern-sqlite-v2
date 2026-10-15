@@ -60,6 +60,76 @@ async function fixture(t) {
 }
 const set = (index, leaf, value) => ({ op: 'set', path: ['messages', index, ...leaf], value })
 
+for (const mode of ['floor', 'patch']) for (const index of [1, 7]) test(`B16: ${mode} deletes variables on floor ${index} durably`, async t => {
+  const f = await fixture(t)
+  const change = { op: 'delete', path: ['messages', index, 'variables'] }
+  if (mode === 'floor') await f.store.setMessageFloor(f.id, 1, index, { changes: [change] })
+  else await f.store.patch(f.id, 1, [change, { op: 'set', path: ['_storageRevision'], value: 2 }])
+  const cold = f.reopen()
+  assert.equal(Object.hasOwn((await cold.read(f.id)).messages[index], 'variables'), false)
+  assert.equal(cold.variables.snapshotAt(f.id, index), undefined)
+  assert.equal(cold.variables.snapshot(f.id).stat_data.floor, index === 7 ? 6 : 7)
+  assert.equal((await cold.read(f.id)).messages[2].variables[0].stat_data.floor, 2)
+})
+
+test('B16: delete followed by replacement keeps the final variables', async t => {
+  const f = await fixture(t)
+  await f.store.setMessageFloor(f.id, 1, 7, { changes: [
+    { op: 'delete', path: ['messages', 7, 'variables'] },
+    set(7, ['variables'], [{ stat_data: { floor: 77 }, schema: {} }]),
+  ] })
+  assert.equal(f.reopen().variables.snapshot(f.id).stat_data.floor, 77)
+})
+
+test('B16: a rejected deletion rolls back snapshots and current state', async t => {
+  const f = await fixture(t), db = new DatabaseSync(f.store.rollbackArchivePath(f.id))
+  try {
+    db.exec("CREATE TRIGGER reject_delete BEFORE INSERT ON archive_messages WHEN NEW.message_index=7 BEGIN SELECT RAISE(ABORT,'reject deletion'); END")
+    await assert.rejects(f.store.setMessageFloor(f.id, 1, 7, { changes: [
+      { op: 'delete', path: ['messages', 7, 'variables'] },
+    ] }), /reject deletion/)
+    assert.equal(f.store.variables.snapshotAt(f.id, 7).stat_data.floor, 7)
+    assert.equal(f.reopen().variables.snapshot(f.id).stat_data.floor, 7)
+  } finally { db.close() }
+})
+
+test('B17: editing one hot floor does not rewrite archived cold floors', async t => {
+  const f = await fixture(t), db = new DatabaseSync(f.store.rollbackArchivePath(f.id))
+  try {
+    db.exec(`CREATE TABLE audit_counts(kind TEXT, idx INTEGER);
+      CREATE TRIGGER count_messages AFTER UPDATE ON archive_messages BEGIN INSERT INTO audit_counts VALUES('message',NEW.message_index); END;
+      CREATE TRIGGER count_snapshots AFTER UPDATE ON variable_snapshots BEGIN INSERT INTO audit_counts VALUES('snapshot',NEW.message_index); END;`)
+    await f.store.setMessageFloor(f.id, 1, 7, { changes: [set(7, ['text'], 'edited')] })
+    assert.equal(db.prepare('SELECT COUNT(*) AS n FROM audit_counts WHERE idx!=7').get().n, 0)
+    assert.equal(db.prepare("SELECT COUNT(*) AS n FROM audit_counts WHERE kind='message'").get().n, 1)
+    assert.equal((await f.reopen().read(f.id)).messages[1].variables[0].stat_data.floor, 1)
+  } finally { db.close() }
+})
+
+test('B18: deleting every snapshot leaves no current tree, including after reopen', async t => {
+  const f = await fixture(t)
+  await f.store.update(f.id, chat => ({ ...chat, _storageRevision: 2,
+    messages: chat.messages.map(row => ({ ...row, turn: row.turn + 1 })) }))
+  assert.equal(f.store.variables.deleteFrom(f.id, 1).state, false)
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const store = attempt === 0 ? f.store : f.reopen()
+    assert.equal(store.variables.has(f.id), false)
+    assert.equal(store.variables.snapshot(f.id), undefined)
+    assert.equal(store.variables.snapshotAll(f.id).size, 0)
+    assert.equal(store.variables.snapshotAt(f.id, 8), undefined)
+  }
+})
+
+test('B19: partial hot caches preserve latest-floor precedence within one turn', async t => {
+  const f = await fixture(t)
+  await f.store.setMessageFloor(f.id, 1, 1, { changes: [set(1, ['turn'], 7)] })
+  f.reopen()
+  await f.store.setMessageFloor(f.id, 2, 1, { changes: [set(1, ['variables'], [{ stat_data: { floor: 101 }, schema: {} }])] })
+  assert.equal(f.store.variables.snapshotAt(f.id, 7).stat_data.floor, 7)
+  assert.equal(f.store.variables.snapshotAll(f.id).get(7).stat_data.floor, 7)
+  assert.equal(f.reopen().variables.snapshotAt(f.id, 7).stat_data.floor, 7)
+})
+
 for (const command of ['appendMessages', 'setMessageFloor']) test('B10: ' + command + ' rejects chat ID header writes before committing', async t => {
   const f = await fixture(t)
   const invoke = headerSets => command === 'appendMessages'
