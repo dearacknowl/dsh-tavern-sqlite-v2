@@ -1,31 +1,47 @@
-# 0.4.12 跨存档变量缓存修复与回归验证
+# 0.4.12 存储审查修复与验证
 
-基线：516fb86e3db90fa91c3f60f20253fa081a810b83。验证环境：Windows / Node.js v24.15.0，2026-10-14。
+基线：f40b973e6f43dcc5d6ebde732a97c5eb91037733（已合并 PR #17）。验证环境：Windows / Node.js v24.15.0，2026-10-15。
 
-## 本次修复 B11
+## 修复范围
 
-同一个 createVariableArchive 实例读取两个档案时，snapshotCache 原键仅包含 message_index 和 swipe_id。A、B 档在相同楼层及 swipe 下，连续只读不会触发写入失效，B 可命中 A 的变量快照。
+|编号|触发与结果|修复|
+|---|---|---|
+|B10 补充|窄命令 headerSets 改写 id 后，档案冷读失败|将 id 纳入追加/单楼命令的保留头字段，写前拒绝|
+|B12|最新楼变 helper 或未结算槽，当前变量仍保留旧树|全量与局部写共享候选复核，按新角色和选中槽回拨；无合格树清空状态；新激活冷楼也能恢复为当前树|
+|B13|单楼 SQL 事务失败，snapshotAt 暴露未提交树|单楼命令异常时清理该档变量缓存和写入追踪|
+|B14|单楼 changes 的对象 set 被改成深合并，旧字段残留；null→对象报错|保留 changes 的 set/delete 边界与顺序，兼容原内部 patch 入口；继续拒绝毒键、缺父路径和 splice|
+|B15|修改 K4 冷楼 turn，快照仍属于旧 turn|无行内 variables 时同步现有快照的 turn 与 selected，覆盖 patch 和单楼命令|
 
-缓存键改为 JSON.stringify([chatId, index, swipe])。保留现有全局写入失效、容量限制和返回值深拷贝行为。回归测试使用两个独立 SQLite 库，经真实 hydrateRow API 验证 A→B→A 读取及返回值修改隔离。
+B11 已随 PR #17 合并，本次继续保留其缓存隔离及回归测试。B01、B02–B06、B08、B09 采用作者现有修复，不重复修改。B07 采用新版 rowid 排序契约。
 
-## 历史问题状态
+## 追加修复 B16–B19
 
-作者在 a1ec25e / 516fb86 中已修复 B02–B06、B09、B10，并加强 B08 的事务边界；B01 也已在上游解决。本 PR 保留作者实现，仅补充不依赖外部宿主源码的合成回归测试，包括静态依赖后动态导入的顶层 await 场景。
+- B16：单楼命令与 patch 的显式 variables 删除意图传入归档层，同事务清理快照；普通 K4 缺字段保持原语义，删除后重新赋值以最终数组为准。
+- B17：局部修剪不再 hydrate 已归档冷楼，避免把不变历史树重新序列化、upsert 并重写消息。仍有历史原始行扫描，不宣称恒定时间。
+- B18：缺少 variable_state 时仅从幸存快照推导，不从已被 deleteFrom 清空的消息热树复活当前态。
+- B19：snapshotAt 使用 turn 索引查询及完整候选排序，避免部分热缓存抢先返回更早楼。代价是每次历史读取执行一次索引查询。
 
-B07：旧版测试原本约定同毫秒按 operation_id 排序，早期将其直接判定为缺陷缺乏契约依据。新上游已明确改为 rowid 顺序，本 PR 保留上游的新行为，不另行修改召回排序。
+追加 9 项回归覆盖冷/热楼、patch/单楼删除、删除后赋值、删除事务失败、消息写入计数、全部快照清空及同轮多楼冷热一致性。B16–B19 的四个复现均在改动前已确认失败。
 
-## 验证
+## 回归验证
 
-新增 test/audit-regressions.test.mjs 共 9 项测试，涵盖历史问题及 B11。最初在 eda1689 基线的八类问题测试均失败；整合作者新修复后，以下定向套件共 35 tests / 35 pass / 0 fail。
+新增 test/audit-store-regressions.test.mjs：22 项自含合成测试。最初的 11 项在本 PR 前序提交 da91ca0 上全部失败，修复后通过；另补充冷楼重新激活、旧 patch 入口和空 JSON 键的兼容覆盖。
+
+下面 10 个测试文件合计 **57 tests / 57 pass / 0 fail**：
 
 ```shell
-node --experimental-vm-modules --test test/audit-regressions.test.mjs test/variable-snapshot-cache.test.mjs test/variable-archive.test.mjs test/variable-query-sqlite-compat.test.mjs test/esm-module-loader.test.mjs test/db-save-identities.test.mjs test/db-save-exchange.test.mjs test/worldbook-recall-store.test.mjs test/worldbook-recall-sql-read.test.mjs
+node --experimental-vm-modules --test test/audit-store-regressions.test.mjs test/audit-regressions.test.mjs test/variable-snapshot-cache.test.mjs test/variable-archive.test.mjs test/variable-query-sqlite-compat.test.mjs test/esm-module-loader.test.mjs test/db-save-identities.test.mjs test/db-save-exchange.test.mjs test/worldbook-recall-store.test.mjs test/worldbook-recall-sql-read.test.mjs
 ```
 
-另运行作者 test/issue15-boundaries.test.mjs：7 pass / 3 fail。三个失败均因其依赖的外部宿主 copy-json-tree.js 夹具缺失，分别涉及两项 B08 和一项 B10；未修改原测试或声称这三项已通过。
+作者原有 test/audit-storage-fixes.test.mjs 另 **10 pass / 0 fail**，包含局部截断、物理回退、保留未触碰热项、helper 冷树回拨、稀疏分页和当前态回收。因此本轮 67 项定向测试通过。该文件硬编码将合成夹具写到仓库外 tmp/gate-fixtures-audit-storage，本机授予该定向测试写入权限后执行；未改其测试源码。
 
-变量查询兼容测试自行提示缺少冻结源码夹具，历史召回扩展段未执行。先前 current-variable-consumers.test.mjs 也因缺少外部 tavern-helper-context.js 夹具加载失败。未执行全量套件或真实宿主 UI/E2E。
+git diff --check 与三个修改源码文件的 node --check 均通过。
 
-大包测试仅验证 1/4/8 MiB 合成容器进入 schema 检查且不发生正则栈溢出；不是完整大存档玩法验收。原有合成完整 DB 交换往返测试通过。身份写入测试注入最小 helper，仅验证 update/read 边界。
+## 验证边界
 
-本 PR 相对当前上游仅修改变量缓存源码、新增测试和本报告，不修改安装器或包版本，不安装或迁移用户存档。
+- 测试只使用合成 SQLite 数据；新增 store 测试注入简化的 update 差量/set/delete helper 与不参与断言的投影替身。它验证真实 store/命令/变量归档/SQL 行为，不代表完整宿主装配。
+- 作者 issue15-boundaries.test.mjs 的三项存储测试依赖仓库外 copy-json-tree.js；此前复验因缺夹具失败。其他 native-message/已知写集宿主测试也依赖外部源码，本轮未据此宣称全量通过。
+- 变量查询兼容测试的历史召回扩展段仍因缺冻结源码未执行。未进行真实 UI/E2E、安装部署或玩家存档迁移。
+- 大包测试为 1/4/8 MiB 合成容器进入 schema 检查，不等同完整大存档玩法验收；原有合成完整 DB 交换往返测试通过。
+
+本 PR 仅修改存储源码、回归测试及本说明，不改变包版本或安装器。没有自动修复此前已被错误写入的玩家数据。
